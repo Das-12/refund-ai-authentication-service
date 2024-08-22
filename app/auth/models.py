@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
-from .database import Base
+from ..database import Base
 from pydantic import BaseModel
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -11,6 +11,7 @@ class User(Base):
     username = Column(String(255), unique=True, index=True)
     hashed_password = Column(String(255))
     api_keys = relationship("APIKey", back_populates="owner")
+    roles = relationship("Role", secondary="user_roles", back_populates="users")
 
 class APIKey(Base):
     __tablename__ = "api_keys"
@@ -22,6 +23,10 @@ class APIKey(Base):
     expires_at = Column(DateTime, nullable=False)
     owner = relationship("User", back_populates="api_keys")
 
+
 class UserCreate(BaseModel):
     username: str
     password: str
+
+class ApiRequest(BaseModel):
+    api_key: str

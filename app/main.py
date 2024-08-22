@@ -1,100 +1,76 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from .auth import authenticate_user, create_access_token, create_user, get_user, decode_access_token,generate_api_key,get_api_key,create_api_key
-from .database import SessionLocal, engine, database
-from .models import Base, UserCreate
+from .database import SessionLocal, engine, database, get_db
+from .auth.models import Base as AuthBase
+from .permissions.models import Base as PermissionsBase, Role, Permission
+from .auth.routes import router as auth_router
+from .permissions.routes import router as permissions_router
+from contextlib import asynccontextmanager
+from .auth.models import User
+from .auth.auth import get_password_hash
 
-Base.metadata.create_all(bind=engine)
 
-app = FastAPI()
+AuthBase.metadata.create_all(bind=engine)
+PermissionsBase.metadata.create_all(bind=engine)
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-@app.on_event("startup")
-async def startup():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Connect to the database
     await database.connect()
-
-@app.on_event("shutdown")
-async def shutdown():
-    await database.disconnect()
-
-@app.post("/users/{username}/apikeys")
-async def create_api_key_for_user(username: str, db: Session = Depends(get_db)):
+    db = SessionLocal()  # Manually create a session
     
-    user = get_user(db, username=username)
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
-        )
-    api_key = create_api_key(db, user)
-    return {"api_key": api_key.key}
-
-@app.get("/users/{username}/apikeys")
-async def list_api_keys_for_user(username: str, db: Session = Depends(get_db)):
-    user = get_user(db, username=username)
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
-        )
-    return {"api_keys": [api.key for api in user.api_keys]}
-
-@app.post("/validate-key")
-async def validate_api_key(api_key: str, db: Session = Depends(get_db)):
-    key = get_api_key(db, api_key)
-    if key is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid API key",
-        )
-    return {"valid": True, "user": key.owner.username}
-
-@app.post("/token")
-async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = authenticate_user(db, form_data.username, form_data.password)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    access_token = create_access_token(data={"sub": user.username})
-    return {"access_token": access_token, "token_type": "bearer"}
-
-@app.post("/register")
-async def register(user: UserCreate, db: Session = Depends(get_db)):
-    db_user = get_user(db, user.username)
-    if db_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username already registered",
-        )
-    new_user = create_user(db, user.username, user.password)
-    return {"username": new_user.username}
+    try:
+        # Create the SuperAdmin role and user
+        create_superadmin(db)
+        create_superadmin_user(db)
+        
+        yield  # Yield to allow the application to run
+        
+    finally:
+        db.close()  # Close the session
+        await database.disconnect()  # Disconnect from the database
 
 
-@app.get("/users/me")
-async def read_users_me(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    username = decode_access_token(token)
-    if username is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
-            headers={"WWW-Authenticate": "Bearer"},
+def create_superadmin(db: Session):
+    # Check if the SuperAdmin role exists
+    superadmin_role = db.query(Role).filter(Role.name == "SuperAdmin").first()
+    if not superadmin_role:
+        # Create the SuperAdmin role
+        superadmin_role = Role(name="SuperAdmin", description="SuperAdmin with all permissions")
+        db.add(superadmin_role)
+        db.commit()
+        db.refresh(superadmin_role)
+
+    # Assign all permissions to the SuperAdmin role
+    all_permissions = db.query(Permission).all()
+    for permission in all_permissions:
+        if permission not in superadmin_role.permissions:
+            superadmin_role.permissions.append(permission)
+    
+    db.commit()
+
+
+def create_superadmin_user(db: Session):
+    # Check if the SuperAdmin user exists
+    superadmin_user = db.query(User).filter(User.username == "superadmin").first()
+    if not superadmin_user:
+        # Create the SuperAdmin user
+        superadmin_user = User(
+            username="superadmin",
+            hashed_password=get_password_hash("superadmin_password")  # Secure this in production!
         )
-    user = get_user(db, username)
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
-        )
-    return {"username": user.username}
+        db.add(superadmin_user)
+        db.commit()
+        db.refresh(superadmin_user)
+    
+    # Assign the SuperAdmin role to the user
+    superadmin_role = db.query(Role).filter(Role.name == "SuperAdmin").first()
+    if superadmin_role not in superadmin_user.roles:
+        superadmin_user.roles.append(superadmin_role)
+        db.commit()
+        db.refresh(superadmin_user)
+
+app = FastAPI(lifespan=lifespan)
+
+app.include_router(auth_router, prefix="/auth")
+app.include_router(permissions_router, prefix="/permissions")

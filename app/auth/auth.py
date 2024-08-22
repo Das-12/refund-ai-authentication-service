@@ -3,7 +3,7 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 from .models import User,APIKey
-from .config import settings
+from ..config import settings
 import secrets
 from sqlalchemy.orm import Session
 
@@ -21,7 +21,11 @@ def create_api_key(db: Session, user: User,expiry_minutes: int = 60*24*15):
     return api_key
 
 def get_api_key(db: Session, key: str):
-    return db.query(APIKey).filter(APIKey.key == key).first()
+    api_key = db.query(APIKey).filter(APIKey.key == key).first()
+    if api_key and api_key.expires_at > datetime.utcnow():
+        return api_key
+    return None
+
 
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
