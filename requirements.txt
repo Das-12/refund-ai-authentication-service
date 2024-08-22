@@ -1,0 +1,12 @@
+fastapi 
+uvicorn 
+pyjwt 
+passlib
+sqlalchemy 
+sqlalchemy-utils 
+pymysql 
+databases 
+alembic
+pydantic-settings
+aiomysql
+python-jose
