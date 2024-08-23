@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
 
-# from app.log_middleware import LogMiddleware
+from app.log_middleware import LoggingMiddleware
 from .database import SessionLocal, engine, database, get_db
 from .auth.models import Base as AuthBase
 from .permissions.models import Base as PermissionsBase, Role, Permission
@@ -77,5 +77,5 @@ app = FastAPI(lifespan=lifespan)
 
 app.include_router(auth_router, prefix="/auth")
 app.include_router(permissions_router, prefix="/permissions")
-# app.add_middleware(LogMiddleware)
+app.add_middleware(LoggingMiddleware)
 

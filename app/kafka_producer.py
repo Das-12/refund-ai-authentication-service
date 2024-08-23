@@ -10,5 +10,6 @@ producer = KafkaProducer(
 )
 
 def send_log(log_data: dict):
+    print("LOG DATA",log_data)
     producer.send(KAFKA_TOPIC, log_data)
     producer.flush()
