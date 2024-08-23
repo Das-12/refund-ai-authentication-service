@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+
+from app.kafka_producer import send_log
 from .auth import authenticate_user, create_access_token, create_user, get_user, decode_access_token,get_api_key,create_api_key
 from ..database import get_db
 from .models import ApiRequest, UserCreate
@@ -67,6 +69,17 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
             headers={"WWW-Authenticate": "Bearer"},
         )
     access_token = create_access_token(data={"sub": user.username})
+    log_data = {
+            "method": "POST",
+            "url": "/token",
+            "user_agent": "Chrome",
+            "ip_address": "127.0.0.1",
+            "token": "access_token",
+            "request_body": "form_data",
+            "response_body": {"access_token": access_token, "token_type": "bearer"},
+            "status_code": 200,
+        }
+    send_log( log_data)
     return {"access_token": access_token, "token_type": "bearer"}
 
 @router.post("/register")

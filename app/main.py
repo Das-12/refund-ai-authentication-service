@@ -1,5 +1,7 @@
 from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
+
+# from app.log_middleware import LogMiddleware
 from .database import SessionLocal, engine, database, get_db
 from .auth.models import Base as AuthBase
 from .permissions.models import Base as PermissionsBase, Role, Permission
@@ -12,6 +14,7 @@ from .auth.auth import get_password_hash
 
 AuthBase.metadata.create_all(bind=engine)
 PermissionsBase.metadata.create_all(bind=engine)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -74,3 +77,5 @@ app = FastAPI(lifespan=lifespan)
 
 app.include_router(auth_router, prefix="/auth")
 app.include_router(permissions_router, prefix="/permissions")
+# app.add_middleware(LogMiddleware)
+

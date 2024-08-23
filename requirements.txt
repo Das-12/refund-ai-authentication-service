@@ -10,3 +10,4 @@ alembic
 pydantic-settings
 aiomysql
 python-jose
+git+https://github.com/dpkp/kafka-python.git
