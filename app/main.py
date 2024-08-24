@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends
+from app.kafka_producer import close_kafka_producer, init_kafka_producer
 from sqlalchemy.orm import Session
 
 from app.log_middleware import LoggingMiddleware
@@ -24,12 +25,14 @@ async def lifespan(app: FastAPI):
     
     try:
         # Create the SuperAdmin role and user
+        await init_kafka_producer()
         create_superadmin(db)
         create_superadmin_user(db)
         
         yield  # Yield to allow the application to run
         
     finally:
+        await close_kafka_producer()
         db.close()  # Close the session
         await database.disconnect()  # Disconnect from the database
 

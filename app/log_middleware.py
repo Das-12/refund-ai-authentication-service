@@ -4,6 +4,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 import json
 import traceback
 from app.kafka_producer import send_log
+import asyncio
 
 
 class LoggingMiddleware(BaseHTTPMiddleware):
@@ -33,7 +34,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             log_data['stack_trace'] = traceback.format_exc()
 
             # Send the log data to Kafka
-            send_log(log_data)
+            asyncio.create_task(send_log(log_data))
 
             # Re-raise the exception to let FastAPI handle it
             raise e
@@ -54,6 +55,6 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         log_data['response_body'] = response_body
         log_data['status_code'] = response.status_code
 
-        send_log( log_data)
+        asyncio.create_task(send_log(log_data))
 
         return response

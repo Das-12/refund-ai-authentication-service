@@ -1,9 +1,10 @@
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from .auth import authenticate_user, create_access_token, create_user, get_user, decode_access_token,get_api_key,create_api_key
+from .auth import authenticate_user, create_access_token, create_user, get_user, decode_access_token,get_api_key,create_api_key, is_api_key_valid
 from ..database import get_db
-from .models import ApiRequest, UserCreate
+from .models import ApiRequest, TokenVerificationRequest, UserCreate
 
 router = APIRouter()
 
@@ -96,4 +97,23 @@ async def read_users_me(token: str = Depends(oauth2_scheme), db: Session = Depen
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found",
         )
+    return {"username": user.username}
+
+@router.post("/verify-token")
+async def verify_token(token_request: TokenVerificationRequest, db: Session = Depends(get_db)):
+
+    token_data = decode_access_token(token_request.token)
+    
+    if token_data is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+
+    user = get_user(db, username=token_data)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+    
+
+    if not is_api_key_valid(user.api_keys,token_request.api_key):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="API Key Expired or Invalid")
+
+    
     return {"username": user.username}

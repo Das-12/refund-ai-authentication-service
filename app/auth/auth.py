@@ -69,3 +69,14 @@ def create_user(db: Session, username: str, password: str):
     db.commit()
     db.refresh(db_user)
     return db_user
+
+def is_api_key_valid(apiKeys:list[APIKey], key: str) -> bool:
+    # Iterate over the user's API keys
+    for api_key in apiKeys:
+        # Check if the key matches
+        if api_key.key == key:
+            # Check if the key has expired
+            if api_key.expires_at > datetime.utcnow():
+                return True
+            else:
+                return False

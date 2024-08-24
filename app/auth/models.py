@@ -30,3 +30,7 @@ class UserCreate(BaseModel):
 
 class ApiRequest(BaseModel):
     api_key: str
+
+class TokenVerificationRequest(BaseModel):
+    token: str
+    api_key: str
