@@ -1,7 +1,10 @@
+import asyncio
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
+from app.kafka_producer import send_count
 from app.permissions.models import Role
 from app.permissions.permissions import has_permission
 from .auth import authenticate_user, create_access_token, create_company, create_user, get_company, get_company_with_apikey, get_user, decode_access_token,get_api_key,create_api_key, is_api_key_valid
@@ -141,5 +144,14 @@ async def verify_token(token_request: TokenVerificationRequest, db: Session = De
     company = get_company_with_apikey(db,token_request.api_key)
     if company.id != user.company.id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="API Key Expired or Invalid")
+    
+    log_data = {
+            'from_url':token_request.from_url,
+            'company': company.id,
+            'api_key': token_request.api_key,
+            'user': user.id,
+            'created_on': datetime.utcnow().strftime("%d/%m/%y %H:%M:%S"),
+    }
+    asyncio.create_task(send_count(log_data))
     
     return {"username": user.username}

@@ -21,3 +21,4 @@ class ApiRequest(BaseModel):
 class TokenVerificationRequest(BaseModel):
     token: str
     api_key: str
+    from_url: str

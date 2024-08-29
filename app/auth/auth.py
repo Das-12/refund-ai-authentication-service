@@ -67,7 +67,6 @@ def get_company(db: Session, phone_number: str):
 
 def get_company_with_apikey(db: Session, token: str):
     apiKey = db.query(APIKey).filter(APIKey.key==token).first()
-    print(apiKey.__dict__)
     return apiKey.company
 
 def authenticate_user(db: Session, username: str, password: str):
