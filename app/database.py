@@ -5,11 +5,11 @@ from databases import Database
 from .config import settings
 import os
 
-MYSQL_USER = os.getenv("MYSQL_USER")
-MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD")
-MYSQL_HOST = os.getenv("MYSQL_HOST")
+MYSQL_USER = os.getenv("MYSQL_USER","root")
+MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD","ARSHAD392")
+MYSQL_HOST = os.getenv("MYSQL_HOST","localhost")
 MYSQL_PORT = os.getenv("MYSQL_PORT", "3306")
-MYSQL_DATABASE = os.getenv("MYSQL_DATABASE")
+MYSQL_DATABASE = os.getenv("MYSQL_DATABASE","auth_service")
 
 
 SQLALCHEMY_DATABASE_URL = (

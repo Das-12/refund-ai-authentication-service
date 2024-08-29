@@ -1,16 +1,27 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
 from ..database import Base
-from pydantic import BaseModel
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
+class Company(Base):
+    __tablename__ = "companies"
+    id = Column(Integer, primary_key=True, index=True)
+    company_name = Column(String(255))
+    contact_person_name = Column(String(255))
+    email = Column(String(255),unique=True,index=True)
+    phone_number = Column(String(255),unique=True,index=True)
+    secondary_phone_number = Column(String(255),unique=True,index=True)
+    users = relationship("User", back_populates="company")
+    api_keys = relationship("APIKey",uselist=False, back_populates="company", cascade="all, delete-orphan")
+
 class User(Base):
     __tablename__ = "users"
-
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(255), unique=True, index=True)
     hashed_password = Column(String(255))
-    api_keys = relationship("APIKey", back_populates="owner")
+    company_id = Column(Integer, ForeignKey('companies.id'))
+    # Many-to-One relationship with Company
+    company = relationship("Company", back_populates="users")
     roles = relationship("Role", secondary="user_roles", back_populates="users")
 
 class APIKey(Base):
@@ -18,19 +29,8 @@ class APIKey(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     key = Column(String(255), unique=True, index=True)
-    user_id = Column(Integer, ForeignKey('users.id'))
+    company_id = Column(Integer, ForeignKey('companies.id'))
     created_at = Column(DateTime, default=datetime.utcnow)
-    expires_at = Column(DateTime, nullable=False)
-    owner = relationship("User", back_populates="api_keys")
+    expires_at = Column(DateTime, nullable=True)
+    company = relationship("Company", back_populates="api_keys")
 
-
-class UserCreate(BaseModel):
-    username: str
-    password: str
-
-class ApiRequest(BaseModel):
-    api_key: str
-
-class TokenVerificationRequest(BaseModel):
-    token: str
-    api_key: str

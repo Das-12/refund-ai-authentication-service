@@ -1,9 +1,9 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI
 from app.kafka_producer import close_kafka_producer, init_kafka_producer
 from sqlalchemy.orm import Session
 
 from app.log_middleware import LoggingMiddleware
-from .database import SessionLocal, engine, database, get_db
+from .database import SessionLocal, engine, database
 from .auth.models import Base as AuthBase
 from .permissions.models import Base as PermissionsBase, Role, Permission
 from .auth.routes import router as auth_router
@@ -26,7 +26,7 @@ async def lifespan(app: FastAPI):
     try:
         # Create the SuperAdmin role and user
         await init_kafka_producer()
-        create_superadmin(db)
+        create_roles_and_permissions(db)
         create_superadmin_user(db)
         
         yield  # Yield to allow the application to run
@@ -36,26 +36,6 @@ async def lifespan(app: FastAPI):
         db.close()  # Close the session
         await database.disconnect()  # Disconnect from the database
 
-
-def create_superadmin(db: Session):
-    # Check if the SuperAdmin role exists
-    superadmin_role = db.query(Role).filter(Role.name == "SuperAdmin").first()
-    if not superadmin_role:
-        # Create the SuperAdmin role
-        superadmin_role = Role(name="SuperAdmin", description="SuperAdmin with all permissions")
-        db.add(superadmin_role)
-        db.commit()
-        db.refresh(superadmin_role)
-
-    # Assign all permissions to the SuperAdmin role
-    all_permissions = db.query(Permission).all()
-    for permission in all_permissions:
-        if permission not in superadmin_role.permissions:
-            superadmin_role.permissions.append(permission)
-    
-    db.commit()
-
-
 def create_superadmin_user(db: Session):
     # Check if the SuperAdmin user exists
     superadmin_user = db.query(User).filter(User.username == "superadmin").first()
@@ -63,19 +43,113 @@ def create_superadmin_user(db: Session):
         # Create the SuperAdmin user
         superadmin_user = User(
             username="superadmin",
-            hashed_password=get_password_hash("superadmin_password")  # Secure this in production!
+            hashed_password=get_password_hash("123456")  # Secure this in production!
         )
         db.add(superadmin_user)
         db.commit()
         db.refresh(superadmin_user)
     
     # Assign the SuperAdmin role to the user
-    superadmin_role = db.query(Role).filter(Role.name == "SuperAdmin").first()
+    superadmin_role = db.query(Role).filter(Role.name == "super_admin").first()
     if superadmin_role not in superadmin_user.roles:
         superadmin_user.roles.append(superadmin_role)
         db.commit()
         db.refresh(superadmin_user)
 
+def create_roles_and_permissions(db:Session):
+    all_permissions = [
+        "Create Company",
+            "Create User",
+            "Update Company",
+            "Update User",
+            "Delete Company",
+            "Delete User",
+            "View Company",
+            "View User",
+            "Create Permission",
+            "Create Role",
+            "Update Permission",
+            "Update Role",
+            "Delete Permission",
+            "Delete Role",
+            "Assign Role",
+            "Assign Permission",
+            "Get Permission of User",
+            "Get Permission Under Roles",
+            "Get Timeline",
+            "Get Users Under Company",
+            "Update User Under Company",
+            "Create User Under Company"
+    ]
+    
+    for permission in all_permissions:
+        permissionModel = db.query(Permission).filter(Permission.name == make_key(permission)).first()
+        if not permissionModel:
+            permissionModel = Permission(
+                name=make_key(permission),
+                description = permission
+            )
+            db.add(permissionModel)
+            db.commit()
+            db.refresh(permissionModel)
+        
+    roles = [{
+        "role":"super_admin",
+        "permissions":[
+            "Create Company",
+            "Create User",
+            "Update Company",
+            "Update User",
+            "Delete Company",
+            "Delete User",
+            "View Company",
+            "View User",
+            "Create Permission",
+            "Create Role",
+            "Update Permission",
+            "Update Role",
+            "Delete Permission",
+            "Delete Role",
+            "Assign Role",
+            "Assign Permission",
+            "Get Permission of User",
+            "Get Permission Under Roles",
+            "Get Timeline"
+        ]
+    },{
+        "role":"company",
+        "permissions":[
+            "Get Timeline",
+            "Get Users Under Company",
+            "Update User Under Company",
+            "Create User Under Company"
+        ]
+    },{
+        "role":"staff",
+        "permissions":[
+            "Get Timeline"
+        ]
+    }]
+    for role in roles:  
+        roleModel = db.query(Role).filter(Role.name == role['role']).first()
+        if not roleModel:
+            roleModel = Role(
+                name=role['role'],
+                description = role['role']
+            )
+            db.add(roleModel)
+            db.commit()
+            db.refresh(roleModel)
+
+        for permission in role['permissions']:
+            permissionModel = db.query(Permission).filter(Permission.name == make_key(permission)).first()
+            if permissionModel not in roleModel.permissions:
+                roleModel.permissions.append(permissionModel)
+                db.commit()
+                db.refresh(roleModel)
+
+def make_key(val:str):
+    return val.replace(" ","_").lower()
 app = FastAPI(lifespan=lifespan)
 
 app.include_router(auth_router, prefix="/auth")

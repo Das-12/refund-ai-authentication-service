@@ -2,19 +2,25 @@ from datetime import datetime, timedelta
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
-from .models import User,APIKey
+
+from app.auth.request_models import CompanyCreate
+from .models import Company, User,APIKey
 from ..config import settings
 import secrets
 from sqlalchemy.orm import Session
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-def generate_api_key():
-    return secrets.token_hex(32)
+def generate_api_key(db:Session):
+    apiKey = secrets.token_hex(32)
+    isExist = get_api_key(db,apiKey)
+    if isExist:
+        generate_api_key(db)
+    return apiKey
 
 def create_api_key(db: Session, user: User,expiry_minutes: int = 60*24*15):
     expiration_time = datetime.utcnow() + timedelta(minutes=expiry_minutes)
-    api_key = APIKey(key=generate_api_key(), owner=user,expires_at=expiration_time)
+    api_key = APIKey(key=generate_api_key(db), owner=user,expires_at=expiration_time)
     db.add(api_key)
     db.commit()
     db.refresh(api_key)
@@ -56,6 +62,14 @@ def decode_access_token(token: str):
 def get_user(db: Session, username: str):
     return db.query(User).filter(User.username == username).first()
 
+def get_company(db: Session, phone_number: str):
+    return db.query(Company).filter(Company.phone_number == phone_number).first()
+
+def get_company_with_apikey(db: Session, token: str):
+    apiKey = db.query(APIKey).filter(APIKey.key==token).first()
+    print(apiKey.__dict__)
+    return apiKey.company
+
 def authenticate_user(db: Session, username: str, password: str):
     user = get_user(db, username)
     if not user or not verify_password(password, user.hashed_password):
@@ -69,6 +83,30 @@ def create_user(db: Session, username: str, password: str):
     db.commit()
     db.refresh(db_user)
     return db_user
+
+def create_company(db: Session, company:CompanyCreate):
+    expiration_time = datetime.utcnow() + timedelta(days=150)  # 150 days from now
+
+    # Create the API key instance
+    api_key_instance = APIKey(
+        key=generate_api_key(db),
+        expires_at=expiration_time
+    )
+
+    db_company = Company(
+        company_name=company.company_name,
+        contact_person_name=company.contact_person_name,
+        email=company.email,
+        phone_number=company.phone_number,
+        secondary_phone_number=company.secondary_phone_number,
+        api_keys=api_key_instance
+    )
+    
+    db.add(db_company)
+    db.commit()
+    db.refresh(db_company)
+
+    return db_company
 
 def is_api_key_valid(apiKeys:list[APIKey], key: str) -> bool:
     # Iterate over the user's API keys
