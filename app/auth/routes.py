@@ -37,7 +37,15 @@ async def login(form_data: LoginRequest, db: Session = Depends(get_db)):
             headers={"WWW-Authenticate": "Bearer"},
         )
     access_token = create_access_token(data={"sub": user.username})
+    isSuperAdmin = False
+    for role in user.roles:
+        if role.name=='super_admin':
+            isSuperAdmin = True
+            break
 
+    if isSuperAdmin:
+        return {"access_token": access_token, "token_type": "bearer"}
+    
     return {"access_token": access_token, "token_type": "bearer","api_key":user.company.api_keys.key}
 
 @router.post("/register/user",status_code=status.HTTP_201_CREATED)
