@@ -9,7 +9,7 @@ from app.permissions.models import Role
 from app.permissions.permissions import has_permission
 from .auth import authenticate_user, create_access_token, create_company, create_user, get_company, get_company_with_apikey, get_user, decode_access_token,get_api_key,create_api_key, is_api_key_valid
 from ..database import get_db
-from .request_models import ApiRequest, CompanyCreate, TokenVerificationRequest, UserCreate
+from .request_models import ApiRequest, CompanyCreate, LoginRequest, TokenVerificationRequest, UserCreate
 
 router = APIRouter()
 
@@ -28,7 +28,7 @@ async def refresh_token( token: str = Depends(oauth2_scheme), db: Session = Depe
     return {"access_token": access_token, "token_type": "bearer"}
 
 @router.post("/login")
-async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+async def login(form_data: LoginRequest, db: Session = Depends(get_db)):
     user = authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(

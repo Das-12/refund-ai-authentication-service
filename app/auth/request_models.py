@@ -22,3 +22,7 @@ class TokenVerificationRequest(BaseModel):
     token: str
     api_key: str
     from_url: str
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
