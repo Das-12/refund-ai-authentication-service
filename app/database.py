@@ -3,17 +3,10 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from databases import Database
 from .config import settings
-import os
-
-MYSQL_USER = os.getenv("MYSQL_USER","root")
-MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD","ARSHAD392")
-MYSQL_HOST = os.getenv("MYSQL_HOST","localhost")
-MYSQL_PORT = os.getenv("MYSQL_PORT", "3306")
-MYSQL_DATABASE = os.getenv("MYSQL_DATABASE","auth_service")
 
 
 SQLALCHEMY_DATABASE_URL = (
-    f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DATABASE}"
+    f"mysql+pymysql://{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
 )
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
