@@ -1,20 +1,25 @@
 from fastapi import Request
-from fastapi.responses import StreamingResponse
-from starlette.middleware.base import BaseHTTPMiddleware
+from fastapi.responses import JSONResponse, PlainTextResponse, Response
+from starlette.middleware.base import BaseHTTPMiddleware,_StreamingResponse
+from starlette.responses import StreamingResponse
+
 import json
 import traceback
 from app.kafka_producer import send_log
 import asyncio
+import logging
 
+logger = logging.getLogger(__name__)
 
 class LoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         # Process the request and get the response
-        
         try:
-            request_body = await request.json()# Await the coroutine to get the actual JSON body
+            request_body = await request.json()
         except json.JSONDecodeError:
-            request_body = None  
+            request_body = None  # Handle non-JSON bodies
+        except Exception:
+            request_body = None  # Handle cases where the body is empty or another error occurs
 
         log_data = {
             'method': request.method,
@@ -22,7 +27,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             'user_agent': request.headers.get('User-Agent'),
             'ip_address': request.client.host,
             'token': request.headers.get('Authorization'),
-            'request_body': request_body,  # Now this is the actual JSON data
+            'request_body': request_body,
         }
 
         try:
@@ -39,22 +44,50 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             # Re-raise the exception to let FastAPI handle it
             raise e
 
+        response_body = None
 
-        if isinstance(response, StreamingResponse):
-            # Capture the streamed response content
-            content = b''
+        print(type(response))
+        print(type(StreamingResponse))
+
+        if isinstance(response, JSONResponse):
+            # Read the response body (it should be JSON)
+            response_body = json.dumps(response.body.decode('utf-8'))
+        elif isinstance(response, StreamingResponse):
+            # Handle StreamingResponse (you can adjust this if not needed)
+            content = b""
             async for chunk in response.body_iterator:
                 content += chunk
             response_body = content.decode('utf-8')
-            # Return a new StreamingResponse with the captured content
-            response = StreamingResponse(iter([content]), status_code=response.status_code, headers=dict(response.headers))
-        else:
-            # For non-streaming responses, just decode the body
-            response_body = response.body.decode('utf-8') if response.body else None
+            # Rebuild the streaming response
+            response = StreamingResponse(
+                iter([content]),
+                status_code=response.status_code,
+                headers=dict(response.headers),
+                media_type=response.media_type
+            )
+        elif isinstance(response, _StreamingResponse):
+            # Handle StreamingResponse (you can adjust this if not needed)
+            content = b""
+            async for chunk in response.body_iterator:
+                content += chunk
+            response_body = content.decode('utf-8')
+            response = StreamingResponse(
+                iter([content]),  # Re-stream the captured content
+                status_code=response.status_code,
+                headers=dict(response.headers),  # Keep original headers
+                media_type=response.media_type,
+            )
 
+            # It's important to remove or adjust the Content-Length header for StreamingResponse
+            if 'content-length' in response.headers:
+                del response.headers['content-length']
+
+
+        # Add response data to the log
         log_data['response_body'] = response_body
         log_data['status_code'] = response.status_code
 
+        # Send the log asynchronously to Kafka
         asyncio.create_task(send_log(log_data))
 
         return response
