@@ -27,6 +27,13 @@ async def send_log(log_data: dict):
     except Exception as e:
         print(f"Failed to send log: {str(e)}")
 
+async def send_count(log_data: dict):
+    try:
+        resp = await producer.send_and_wait(settings.KAFKA_COUNT_TOPIC, log_data)
+        print("COUNT SEND")
+    except Exception as e:
+        print(f"Failed to send log: {str(e)}")
+        
 async def close_kafka_producer():
     global producer
     if producer:
