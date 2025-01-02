@@ -10,7 +10,9 @@ def get_user_roles(user: User):
 
 def has_permission(user: User, permission_name: str):
     for role in user.roles:
+        # print(f"role is {role}")
         for permission in role.permissions:
+            # print(f"permission is {permission}")
             if permission.name == permission_name:
                 return True
     return False

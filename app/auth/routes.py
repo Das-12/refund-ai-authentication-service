@@ -7,9 +7,22 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from app.kafka_producer import send_count
 from app.permissions.models import Role
 from app.permissions.permissions import has_permission
-from .auth import authenticate_user, create_access_token, create_company, create_user, get_company, get_company_with_apikey, get_user, decode_access_token,get_api_key,create_api_key, is_api_key_valid
+from .auth import (authenticate_user, create_access_token, create_company, create_user, get_company, get_company_with_apikey, get_user,
+                   decode_access_token,get_api_key,create_api_key, is_api_key_valid, get_all_company, get_company_by_id, update_company,
+                   update_user, delete_company)
 from ..database import get_db
-from .request_models import ApiRequest, CompanyCreate, LoginRequest, TokenVerificationRequest, UserCreate
+from .request_models import ApiRequest, CompanyCreate, LoginRequest, TokenVerificationRequest, UserCreate, TokenRequest, UpdateCompany
+import logging
+
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler()  # Log to console
+        # logging.FileHandler("app.log")  # Uncomment to log to a file
+    ]
+)
 
 router = APIRouter()
 
@@ -91,6 +104,7 @@ async def register_user(user: UserCreate,token: str = Depends(oauth2_scheme), db
 
 @router.post("/register/company",status_code=status.HTTP_201_CREATED)
 async def register(company: CompanyCreate,token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    logging.info(f"this is company data {company}")
     user = get_user(db, username=decode_access_token(token))
     if not has_permission(user, "create_company"):
         raise HTTPException(
@@ -162,4 +176,106 @@ async def verify_token(token_request: TokenVerificationRequest, db: Session = De
     }
     asyncio.create_task(send_count(log_data))
     
-    return {"username": user.username}
+    return {"username": user.username, "role": user.roles[0].name}
+
+
+@router.post("/get_company")
+async def get_all_company_endpoint(token_request: TokenRequest, db: Session = Depends(get_db)):
+    username = decode_access_token(token_request.token)
+    if username is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    user = get_user(db, username)
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+    if not has_permission(user, "view_company"):
+
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions",
+        )
+    companies = get_all_company(db)
+    return companies
+
+@router.post("/get_company/{company_id}")
+async def get_company_endpoint(token_request: TokenRequest,company_id: int, db: Session = Depends(get_db)):
+    username = decode_access_token(token_request.token)
+    if username is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    user = get_user(db, username)
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+    if not has_permission(user, "view_company"):
+
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions",
+        )
+    companies = get_company_by_id(company_id, db)
+    return companies
+
+
+@router.put("/update_company/{company_id}")
+async def update_company_endpoint(company_id: int, company: UpdateCompany,token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    logging.info(f"endpoint started working")
+    username = decode_access_token(token)
+    if username is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    user = get_user(db, username)
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+    if not has_permission(user, "update_company"):
+
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions",
+        )
+    company_obj = update_company(company_id,company,db)
+    return {"status":True,"message":"Company updated Successfully","updated_company": company_obj}
+
+@router.delete("/delete_company/{company_id}")
+async def delete_company_endpoint(company_id: int,token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    username = decode_access_token(token)
+    if username is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    user = get_user(db, username)
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+    if not has_permission(user, "delete_company"):
+
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions",
+        )
+    company_obj = delete_company(company_id,db)
+    if company_obj:
+        return {"status":True,"message":"Company Deleted Successfully"}  
+    else:
+        return {"status":False,"message":"Company Not Found"}  

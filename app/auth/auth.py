@@ -117,3 +117,39 @@ def is_api_key_valid(apiKeys:list[APIKey], key: str) -> bool:
                 return True
             else:
                 return False
+
+
+def get_all_company(db: Session):
+    data = db.query(Company).all()
+    return data
+
+
+def get_company_by_id(company_id: int, db: Session):
+    data = db.query(Company).filter(Company.id == company_id).first()
+    return data
+
+
+def update_company(company_id: int, company: CompanyCreate, db: Session):
+    db_company = db.query(Company).filter(Company.id == company_id).first()
+    db_company.company_name = company.company_name
+    db_company.contact_person_name = company.contact_person_name
+    db_company.email = company.email
+    db_company.phone_number = company.phone_number
+    db_company.secondary_phone_number = company.secondary_phone_number
+    db.commit()
+    db.refresh(db_company)
+    return db_company
+
+def update_user(company_id: int, username: str, password: str, db: Session):
+    user = db.query(User).filter(User.company_id == company_id).first()
+    user.username = username
+    user.hashed_password = get_password_hash(password)
+    db.commit()
+    db.refresh(user)
+    return user
+
+def delete_company(company_id: int, db: Session):
+    db_company = db.query(Company).filter(Company.id == company_id).first()
+    db.delete(db_company)
+    db.commit()
+    return True
