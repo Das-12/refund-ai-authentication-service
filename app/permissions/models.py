@@ -28,6 +28,9 @@ class Role(Base):
     description = Column(String(255))
     users = relationship("User", secondary=user_roles, back_populates="roles")
     permissions = relationship("Permission", secondary=role_permissions, back_populates="roles")
+    
+    def __str__(self):
+        return f"Role(name={self.name})"
 
 class Permission(Base):
     __tablename__ = "permissions"
@@ -36,6 +39,9 @@ class Permission(Base):
     name = Column(String(50), unique=True)
     description = Column(String(255))
     roles = relationship("Role", secondary=role_permissions, back_populates="permissions")
+    
+    def __str__(self):
+        return f"Permission(name={self.name})"
 
 class RoleRequest(BaseModel):
     name: str

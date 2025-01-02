@@ -1,5 +1,5 @@
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 class CompanyCreate(BaseModel):
     username: str
@@ -10,6 +10,14 @@ class CompanyCreate(BaseModel):
     phone_number: str
     secondary_phone_number: str
     api_keys: Optional[str] = None
+    
+class UpdateCompany(BaseModel):
+    company_name: Optional[str] = Field(default=None)
+    contact_person_name: Optional[str] = Field(default=None)
+    email: Optional[str] = Field(default=None)
+    phone_number: Optional[str] = Field(default=None)
+    secondary_phone_number: Optional[str] = Field(default=None)
+    api_keys: Optional[str] = Field(default=None)
 
 class UserCreate(BaseModel):
     username: str
@@ -26,3 +34,7 @@ class TokenVerificationRequest(BaseModel):
 class LoginRequest(BaseModel):
     username: str
     password: str
+    
+class TokenRequest(BaseModel):
+    token: str
+    
