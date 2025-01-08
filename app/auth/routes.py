@@ -9,10 +9,11 @@ from app.permissions.models import Role
 from app.permissions.permissions import has_permission
 from .auth import (authenticate_user, create_access_token, create_company, create_user, get_company, get_company_with_apikey, get_user,
                    decode_access_token,get_api_key,create_api_key, is_api_key_valid, get_all_company, get_company_by_id, update_company,
-                   update_user, delete_company)
+                   update_user, delete_company, get_user_by_id, get_all_users)
 from ..database import get_db
-from .request_models import ApiRequest, CompanyCreate, LoginRequest, TokenVerificationRequest, UserCreate, TokenRequest, UpdateCompany
+from .request_models import ApiRequest, CompanyCreate, LoginRequest, TokenVerificationRequest, UserCreate, TokenRequest, UpdateCompany, UserOut, UserUpdate
 import logging
+from typing import List
 
 
 logging.basicConfig(
@@ -73,34 +74,43 @@ async def register_user(user: UserCreate,token: str = Depends(oauth2_scheme), db
     login_user = get_user(db, username)
     if login_user is None:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
-            headers={"WWW-Authenticate": "Bearer"},
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="user not found",
         )
-    if not has_permission(login_user, "create_user_under_company"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Insufficient permissions",
-        )
-    
     db_user = get_user(db, user.username)
+        
     if db_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Username already registered",
         )
-    new_user = create_user(db, user.username, user.password)
-    
-    new_user.company = login_user.company
-    db.commit()
-    db.refresh(new_user)
-    staff_role = db.query(Role).filter(Role.name == "company").first()
-    if staff_role not in new_user.roles:
-        new_user.roles.append(staff_role)
+    if has_permission(login_user, "create_user"):
+        new_user = create_user(db, user.username, user.password)
+        new_user.company_id = user.company_id
         db.commit()
         db.refresh(new_user)
-    
-    return {"username": new_user.username}
+        staff_role = db.query(Role).filter(Role.name == "staff").first()
+        if staff_role not in new_user.roles:
+            new_user.roles.append(staff_role)
+            db.commit()
+            db.refresh(new_user)
+        return {"username": new_user.username}
+    elif has_permission(login_user, "create_user_under_company"):
+        new_user = create_user(db, user.username, user.password)
+        new_user.company = login_user.company
+        db.commit()
+        db.refresh(new_user)
+        staff_role = db.query(Role).filter(Role.name == "staff").first()
+        if staff_role not in new_user.roles:
+            new_user.roles.append(staff_role)
+            db.commit()
+            db.refresh(new_user)
+        return {"username": new_user.username}
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions",
+        )
 
 @router.post("/register/company",status_code=status.HTTP_201_CREATED)
 async def register(company: CompanyCreate,token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
@@ -134,7 +144,7 @@ async def register(company: CompanyCreate,token: str = Depends(oauth2_scheme), d
         db.commit()
         db.refresh(new_user)
 
-    return {"status":True,"message":"Company Created Successfully"}
+    return {"status":True,"message":"Company Created Successfully","company ID":new_company.id}
 
 @router.get("/users/me")
 async def read_users_me(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
@@ -178,6 +188,7 @@ async def verify_token(token_request: TokenVerificationRequest, db: Session = De
         asyncio.create_task(send_count(log_data))
     
     return {"username": user.username, "role": user.roles[0].name}
+
 
 
 @router.post("/get_company")
@@ -280,3 +291,139 @@ async def delete_company_endpoint(company_id: int,token: str = Depends(oauth2_sc
         return {"status":True,"message":"Company Deleted Successfully"}  
     else:
         return {"status":False,"message":"Company Not Found"}  
+    
+
+@router.get("/get_user/{user_id}", response_model=UserOut)
+async def get_user_endpoint(user_id: int,token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    username = decode_access_token(token)
+    if username is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    request_user = get_user(db, username)
+    if request_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+    if has_permission(request_user, "view_user"):
+        user_obj = get_user_by_id(user_id, db)
+        return user_obj
+    elif has_permission(request_user, "get_users_under_company"):
+        user_obj = get_user_by_id(user_id, db)
+        if request_user.company_id == user_obj.company_id:
+            return user_obj
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="you can only view the user under your company",
+        )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions",
+        )
+
+@router.get("/get_all_user", response_model=List[UserOut])
+async def get_all_user_endpoint(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    username = decode_access_token(token)
+    if username is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    user_obj = get_user(db, username)
+    if user_obj is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+    if has_permission(user_obj, "view_user"):
+        users = get_all_users(db)
+        for user in users:
+            if user.id == user_obj.id:
+                users.remove(user)
+        return users
+    elif has_permission(user_obj, "get_users_under_company"):
+        users = get_all_users(db)
+        users_list = []
+        for user in users:
+            if user.company_id == user_obj.company_id and user.id != user_obj.id:
+                users_list.append(user)
+        logging.info(f"this is all users {users_list}")
+        return users_list
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Insufficient permissions",
+    )
+    
+@router.put("/update_user/{user_id}", response_model=UserOut)
+async def update_user_endpoint(user_id: int, user: UserUpdate, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    username = decode_access_token(token)
+    if username is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    request_user = get_user(db, username)
+    if request_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+    if has_permission(request_user, "update_user"):
+        user_obj = update_user(user_id, user.username, user.password, db)
+        return user_obj
+    elif has_permission(request_user, "update_user_under_company"):
+        user_obj = get_user_by_id(user_id, db)
+        if request_user.company_id == user_obj.company_id:
+            user_obj = update_user(user_id, user.username, user.password, db)
+            return user_obj
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="you can only update the user under your company",
+        )
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Insufficient permissions",
+    )
+    
+@router.delete("/delete_user/{user_id}")
+async def delete_user_endpoint(user_id: int, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    username = decode_access_token(token)
+    if username is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    request_user = get_user(db, username)
+    if request_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+    if has_permission(request_user, "delete_user"):
+        user_obj = get_user_by_id(user_id, db)
+        user_obj.is_active = False
+        db.commit()
+        db.refresh(user_obj)
+        return {"status":True,"message":"User Deleted Successfully"}
+    elif has_permission(request_user, "delete_user_under_company"):
+        user_obj = get_user_by_id(user_id, db)
+        if request_user.company_id == user_obj.company_id:
+            user_obj.is_active = False
+            db.commit()
+            db.refresh(user_obj)
+            return {"status":True,"message":"User Deleted Successfully"}
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="you can only delete the user under your company",
+        )
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Insufficient permissions",
+    )
