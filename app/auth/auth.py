@@ -3,7 +3,7 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
-from app.auth.request_models import CompanyCreate
+from app.auth.request_models import CompanyCreate, UserOut
 from .models import Company, User,APIKey
 from ..config import settings
 import secrets
@@ -71,6 +71,8 @@ def get_company_with_apikey(db: Session, token: str):
 
 def authenticate_user(db: Session, username: str, password: str):
     user = get_user(db, username)
+    if user.is_active == False:
+        return None
     if not user or not verify_password(password, user.hashed_password):
         return None
     return user
@@ -121,12 +123,18 @@ def is_api_key_valid(apiKeys:list[APIKey], key: str) -> bool:
 
 def get_all_company(db: Session):
     data = db.query(Company).all()
+    for user in data:
+        if user.is_active == False:
+            data.remove(user)
     return data
 
 
 def get_company_by_id(company_id: int, db: Session):
     data = db.query(Company).filter(Company.id == company_id).first()
-    return data
+    if data.is_active == False:
+        return None
+    else:
+        return data
 
 
 def update_company(company_id: int, company: CompanyCreate, db: Session):
@@ -140,16 +148,35 @@ def update_company(company_id: int, company: CompanyCreate, db: Session):
     db.refresh(db_company)
     return db_company
 
-def update_user(company_id: int, username: str, password: str, db: Session):
-    user = db.query(User).filter(User.company_id == company_id).first()
-    user.username = username
-    user.hashed_password = get_password_hash(password)
-    db.commit()
-    db.refresh(user)
-    return user
 
 def delete_company(company_id: int, db: Session):
     db_company = db.query(Company).filter(Company.id == company_id).first()
-    db.delete(db_company)
+    db_company.is_active = False
     db.commit()
+    db.refresh(db_company)
     return True
+
+
+def get_user_by_id(user_id: int, db: Session):
+    data = db.query(User).filter(User.id == user_id).first()
+    if data.is_active == False:
+        return None
+    else:
+        return data
+
+def get_all_users(db: Session):
+    users = db.query(User).all()
+    for user in users:
+        if user.is_active == False:
+            users.remove(user)
+    return users
+
+def update_user(user_id: int, username: str, password: str, db: Session):
+    user = db.query(User).filter(User.id == user_id).first()
+    if username is not None:
+        user.username = username
+    if password is not None:
+        user.hashed_password = get_password_hash(password)
+    db.commit()
+    db.refresh(user)
+    return user

@@ -22,6 +22,15 @@ class UpdateCompany(BaseModel):
 class UserCreate(BaseModel):
     username: str
     password: str
+    company_id: Optional[int] = None
+    
+class UserUpdate(BaseModel):
+    username: Optional[str] = Field(default=None)
+    password: Optional[str] = Field(default=None)
+    
+class UserOut(BaseModel):
+    username: Optional[str] = None
+    company_id: Optional[int] = None
 
 class ApiRequest(BaseModel):
     api_key: str
