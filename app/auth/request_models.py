@@ -28,7 +28,7 @@ class ApiRequest(BaseModel):
 
 class TokenVerificationRequest(BaseModel):
     token: str
-    api_key: str
+    api_key: Optional[str] = None
     from_url: str
 
 class LoginRequest(BaseModel):

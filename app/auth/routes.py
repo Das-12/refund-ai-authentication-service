@@ -162,19 +162,20 @@ async def verify_token(token_request: TokenVerificationRequest, db: Session = De
     user = get_user(db, username=token_data)
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+
+    if "super_admin" not in [role.name for role in user.roles]:
+        company = get_company_with_apikey(db, token_request.api_key)
+        if company.id != user.company.id:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="API Key Expired or Invalid")
     
-    company = get_company_with_apikey(db,token_request.api_key)
-    if company.id != user.company.id:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="API Key Expired or Invalid")
-    
-    log_data = {
-            'from_url':token_request.from_url,
-            'company': company.id,
-            'api_key': token_request.api_key,
-            'user': user.id,
-            'created_on': datetime.utcnow().strftime("%d/%m/%y %H:%M:%S"),
-    }
-    asyncio.create_task(send_count(log_data))
+        log_data = {
+                'from_url':token_request.from_url,
+                'company': company.id,
+                'api_key': token_request.api_key,
+                'user': user.id,
+                'created_on': datetime.utcnow().strftime("%d/%m/%y %H:%M:%S"),
+        }
+        asyncio.create_task(send_count(log_data))
     
     return {"username": user.username, "role": user.roles[0].name}
 
