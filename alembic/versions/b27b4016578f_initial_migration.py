@@ -1,8 +1,8 @@
-"""Initial migration
+"""initial migration
 
-Revision ID: 71650d62e13d
-Revises: 6d9471005823
-Create Date: 2024-12-30 17:50:35.343975
+Revision ID: b27b4016578f
+Revises: 
+Create Date: 2025-02-05 13:12:06.513065
 
 """
 from typing import Sequence, Union
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '71650d62e13d'
-down_revision: Union[str, None] = '6d9471005823'
+revision: str = 'b27b4016578f'
+down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -27,6 +27,7 @@ def upgrade() -> None:
     sa.Column('email', sa.String(length=255), nullable=True),
     sa.Column('phone_number', sa.String(length=255), nullable=True),
     sa.Column('secondary_phone_number', sa.String(length=255), nullable=True),
+    sa.Column('is_active', sa.Boolean(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_companies_email'), 'companies', ['email'], unique=True)
@@ -41,6 +42,18 @@ def upgrade() -> None:
     sa.UniqueConstraint('name')
     )
     op.create_index(op.f('ix_permissions_id'), 'permissions', ['id'], unique=False)
+    op.create_table('plans',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('name', sa.String(length=50), nullable=True),
+    sa.Column('description', sa.String(length=255), nullable=True),
+    sa.Column('price', sa.Integer(), nullable=True),
+    sa.Column('max_request', sa.Integer(), nullable=True),
+    sa.Column('type_of_subscription', sa.String(length=50), nullable=True),
+    sa.CheckConstraint("type_of_subscription IN ('monthly', 'yearly')", name='valid_subscription_type'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('name')
+    )
+    op.create_index(op.f('ix_plans_id'), 'plans', ['id'], unique=False)
     op.create_table('roles',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(length=50), nullable=True),
@@ -66,11 +79,24 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['permission_id'], ['permissions.id'], ),
     sa.ForeignKeyConstraint(['role_id'], ['roles.id'], )
     )
+    op.create_table('subscriptions',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('company_id', sa.Integer(), nullable=True),
+    sa.Column('plan_id', sa.Integer(), nullable=True),
+    sa.Column('start_date', sa.DateTime(), nullable=True),
+    sa.Column('end_date', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['company_id'], ['companies.id'], ),
+    sa.ForeignKeyConstraint(['plan_id'], ['plans.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('company_id')
+    )
+    op.create_index(op.f('ix_subscriptions_id'), 'subscriptions', ['id'], unique=False)
     op.create_table('users',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('username', sa.String(length=255), nullable=True),
     sa.Column('hashed_password', sa.String(length=255), nullable=True),
     sa.Column('company_id', sa.Integer(), nullable=True),
+    sa.Column('is_active', sa.Boolean(), nullable=True),
     sa.ForeignKeyConstraint(['company_id'], ['companies.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
@@ -91,12 +117,16 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_users_username'), table_name='users')
     op.drop_index(op.f('ix_users_id'), table_name='users')
     op.drop_table('users')
+    op.drop_index(op.f('ix_subscriptions_id'), table_name='subscriptions')
+    op.drop_table('subscriptions')
     op.drop_table('role_permissions')
     op.drop_index(op.f('ix_api_keys_key'), table_name='api_keys')
     op.drop_index(op.f('ix_api_keys_id'), table_name='api_keys')
     op.drop_table('api_keys')
     op.drop_index(op.f('ix_roles_id'), table_name='roles')
     op.drop_table('roles')
+    op.drop_index(op.f('ix_plans_id'), table_name='plans')
+    op.drop_table('plans')
     op.drop_index(op.f('ix_permissions_id'), table_name='permissions')
     op.drop_table('permissions')
     op.drop_index(op.f('ix_companies_secondary_phone_number'), table_name='companies')

@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
-from app.kafka_producer import send_count
+# from app.kafka_producer import send_count
 from app.permissions.models import Role
 from app.permissions.permissions import has_permission
 from .auth import (authenticate_user, create_access_token, create_company, create_user, get_company, get_company_with_apikey, get_user,
@@ -21,7 +21,6 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler()  # Log to console
-        # logging.FileHandler("app.log")  # Uncomment to log to a file
     ]
 )
 
@@ -178,18 +177,16 @@ async def verify_token(token_request: TokenVerificationRequest, db: Session = De
         if company.id != user.company.id:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="API Key Expired or Invalid")
     
-        log_data = {
-                'from_url':token_request.from_url,
-                'company': company.id,
-                'api_key': token_request.api_key,
-                'user': user.id,
-                'created_on': datetime.utcnow().strftime("%d/%m/%y %H:%M:%S"),
-        }
-        asyncio.create_task(send_count(log_data))
+        # log_data = {
+        #         'from_url':token_request.from_url,
+        #         'company': company.id,
+        #         'api_key': token_request.api_key,
+        #         'user': user.id,
+        #         'created_on': datetime.utcnow().strftime("%d/%m/%y %H:%M:%S"),
+        # }
+        # asyncio.create_task(send_count(log_data))
     
     return {"username": user.username, "role": user.roles[0].name}
-
-
 
 @router.post("/get_company")
 async def get_all_company_endpoint(token_request: TokenRequest, db: Session = Depends(get_db)):
@@ -238,7 +235,6 @@ async def get_company_endpoint(token_request: TokenRequest,company_id: int, db: 
         )
     companies = get_company_by_id(company_id, db)
     return companies
-
 
 @router.put("/update_company/{company_id}")
 async def update_company_endpoint(company_id: int, company: UpdateCompany,token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
