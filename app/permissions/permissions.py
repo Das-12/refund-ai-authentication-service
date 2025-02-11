@@ -8,6 +8,9 @@ from fastapi import HTTPException, status
 def get_user_roles(user: User):
     return [role.name for role in user.roles]
 
+def get_user_permissions(user: User):
+    return [permission.name for role in user.roles for permission in role.permissions]
+
 def has_permission(user: User, permission_name: str):
     for role in user.roles:
         # print(f"role is {role}")
@@ -47,3 +50,12 @@ def assign_permission_to_role(db: Session, role_name: str, permission_name: str)
         db.commit()
         db.refresh(role)
     return role
+
+# def create_role(db: Session, role_name: str):
+#     role = db.query(Role).filter(Role.name == role_name).first()
+#     if not role:
+#         role = Role(name=role_name)
+#         db.add(role)
+#         db.commit()
+#         db.refresh(role)
+#     return role

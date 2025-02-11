@@ -31,7 +31,7 @@ class Role(Base):
     
     def __str__(self):
         return f"Role(name={self.name})"
-
+    
 class Permission(Base):
     __tablename__ = "permissions"
 

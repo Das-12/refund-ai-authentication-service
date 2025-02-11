@@ -4,6 +4,7 @@ from sqlalchemy.orm import relationship
 from datetime import datetime
 
 class Company(Base):
+    
     __tablename__ = "companies"
     id = Column(Integer, primary_key=True, index=True)
     company_name = Column(String(255))
@@ -12,10 +13,14 @@ class Company(Base):
     phone_number = Column(String(255),unique=True,index=True)
     secondary_phone_number = Column(String(255),unique=True,index=True)
     is_active = Column(Boolean, default=True, nullable=True)
+    
     users = relationship("User", back_populates="company")
     api_keys = relationship("APIKey",uselist=False, back_populates="company", cascade="all, delete-orphan")
+    
+    subscription = relationship("Subscription", uselist=False, back_populates="company", cascade="all, delete-orphan")
 
 class User(Base):
+    
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(255), unique=True, index=True)

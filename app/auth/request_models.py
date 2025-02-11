@@ -43,7 +43,7 @@ class TokenVerificationRequest(BaseModel):
 class LoginRequest(BaseModel):
     username: str
     password: str
-    
+
 class TokenRequest(BaseModel):
     token: str
     

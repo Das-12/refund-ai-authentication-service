@@ -1,7 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from app.kafka_producer import close_kafka_producer, init_kafka_producer
 from sqlalchemy.orm import Session
-
+from aiokafka import AIOKafkaConsumer
+from .kafka_consumer import update_subscription_count
 from app.log_middleware import LoggingMiddleware
 from .database import SessionLocal, engine, database
 from .auth.models import Base as AuthBase
@@ -9,9 +10,14 @@ from .permissions.models import Base as PermissionsBase, Role, Permission
 from .auth.routes import router as auth_router
 from .permissions.routes import router as permissions_router
 from contextlib import asynccontextmanager
+from .subscriptions.routes import router as subscriptions_router
 from .auth.models import User
 from .auth.auth import get_password_hash
-
+from fastapi.responses import JSONResponse
+import traceback
+import asyncio
+from .kafka_producer import send_app_error
+from .config import settings
 
 AuthBase.metadata.create_all(bind=engine)
 PermissionsBase.metadata.create_all(bind=engine)
@@ -28,9 +34,36 @@ async def lifespan(app: FastAPI):
         await init_kafka_producer()
         create_roles_and_permissions(db)
         create_superadmin_user(db)
+        retries = 10
+        consumer = None
+        while retries > 0:
+            try:
+                consumer = AIOKafkaConsumer(
+                    settings.KAFKA_COUNT_TOPIC,
+                    bootstrap_servers=settings.KAFKA_BROKER_URL,
+                    group_id='count-group',
+                    auto_offset_reset='earliest',
+                    enable_auto_commit=True,              
+                )
+                print('auth consumer started')
+                break
+            except Exception as e:
+                print('failed starting consumer')
+                retries -= 1
+                await asyncio.sleep(10)
+                
+        if consumer is None:
+            raise Exception("Failed to start Kafka consumer")
         
-        yield  # Yield to allow the application to run
+
+        task = asyncio.create_task(update_subscription_count(consumer=consumer))
         
+        try:
+            yield
+        finally:
+            task.cancel()
+            await asyncio.wait_for(task, timeout=5)
+            
     finally:
         await close_kafka_producer()
         db.close()  # Close the session
@@ -79,7 +112,19 @@ def create_roles_and_permissions(db:Session):
             "Get Timeline",
             "Get Users Under Company",
             "Update User Under Company",
-            "Create User Under Company"
+            "Create User Under Company",
+            "View Roles of User",
+            "Assign Permissions",
+            "View Permissions",
+            "View Roles",
+            "Create Plan",
+            "View Plans",
+            "Update Plan",
+            "Delete Plan",
+            "Create Subscription",
+            "View Subscriptions",
+            "Update Subscription",
+            "Delete Subscription"
     ]
     
     for permission in all_permissions:
@@ -114,7 +159,19 @@ def create_roles_and_permissions(db:Session):
             "Assign Permission",
             "Get Permission of User",
             "Get Permission Under Roles",
-            "Get Timeline"
+            "Get Timeline",
+            "View Roles of User",
+            "Assign Permissions",
+            "View Permissions",
+            "View Roles",
+            "Create Plan",
+            "View Plans",
+            "Update Plan",
+            "Delete Plan",
+            "Create Subscription",
+            "View Subscriptions",
+            "Update Subscription",
+            "Delete Subscription"
         ]
     },{
         "role":"company",
@@ -152,7 +209,25 @@ def make_key(val:str):
     return val.replace(" ","_").lower()
 app = FastAPI(lifespan=lifespan)
 
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """
+    Global exception handler that logs unhandled exceptions to Kafka.
+    """
+    error_log = {
+        "error_message": str(exc),
+        "stack_trace": traceback.format_exc(),
+        "path": request.url.path,
+        "method": request.method,
+        "client": request.client.host if request.client else "unknown",
+    }
+    asyncio.create_task(send_app_error(error_log))
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error. Please contact support."}
+    )
+
 app.include_router(auth_router, prefix="/auth")
 app.include_router(permissions_router, prefix="/permissions")
-# app.add_middleware(LoggingMiddleware)
+app.add_middleware(LoggingMiddleware)
 
