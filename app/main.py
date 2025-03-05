@@ -18,6 +18,8 @@ import traceback
 import asyncio
 from .kafka_producer import send_app_error
 from .config import settings
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 AuthBase.metadata.create_all(bind=engine)
 PermissionsBase.metadata.create_all(bind=engine)
@@ -220,6 +222,8 @@ async def global_exception_handler(request: Request, exc: Exception):
         "path": request.url.path,
         "method": request.method,
         "client": request.client.host if request.client else "unknown",
+        "service": 'authentication_micro_service',
+        'timestamp': datetime.now(ZoneInfo("Asia/Kolkata")).isoformat(),
     }
     asyncio.create_task(send_app_error(error_log))
     return JSONResponse(
