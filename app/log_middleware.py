@@ -100,6 +100,8 @@ import asyncio
 import traceback
 from app.kafka_producer import send_log
 import logging
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 logger = logging.getLogger(__name__)
 
@@ -117,6 +119,8 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             'ip_address': request.client.host,
             'token': request.headers.get('Authorization'),
             'request_body': request_body,
+            'service': 'authentication_micro_service',
+            'timestamp': datetime.now(ZoneInfo("Asia/Kolkata")).isoformat(),
         }
 
         try:

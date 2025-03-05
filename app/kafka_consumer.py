@@ -2,9 +2,13 @@ import asyncio
 import json
 from kafka import KafkaConsumer
 from app.database import get_db
-from app.subscriptions.models import Subscription
+from app.subscriptions.models import Subscription, UserSubscriptionCount
 from app.auth import get_user
 from app.config import settings
+from datetime import datetime, timedelta, timezone
+import pytz
+
+IST = pytz.timezone("Asia/Kolkata")
 
 topic = settings.KAFKA_COUNT_TOPIC
 broker_url = settings.KAFKA_BROKER_URL
@@ -28,6 +32,31 @@ async def update_subscription_count(consumer):
                 if not user:
                     print(f"User not found: {username}")
                     continue
+                
+                now_utc = datetime.utcnow().replace(tzinfo=timezone.utc)
+                now_ist = now_utc.astimezone(IST)
+                current_month = now_ist.month
+                current_year = now_ist.year
+                
+                user_count = db.query(UserSubscriptionCount).filter(
+                    UserSubscriptionCount.user_id == user.id,
+                    UserSubscriptionCount.month == current_month,
+                    UserSubscriptionCount.year == current_year
+                ).first()
+                
+                if user_count:
+                    user_count.request_count += 1
+                    print(f"Updated count for user {username} in {current_month}/{current_year} (IST). New count: {user_count.request_count}")
+                else:
+                    user_count = UserSubscriptionCount(
+                        user_id=user.id,
+                        company_id=user.company_id,
+                        month=current_month,
+                        year=current_year,
+                        request_count=count
+                    )
+                    db.add(user_count)
+                    print(f"Created new entry for user {username} in {current_month}/{current_year} (IST) with count {count}")
                 
                 # if user.roles != "company":
                 #     print(f"Cannot update count for non-company user: {username}")
