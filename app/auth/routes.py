@@ -156,7 +156,7 @@ async def register(company: CompanyCreate,token: str = Depends(oauth2_scheme), d
             db.commit()
             db.refresh(new_user)
 
-        return {"status":True,"message":"Company Created Successfully","company ID":new_company.id}
+        return {"status":True,"message":"Company Created Successfully","company_id":new_company.id}
     except Exception as e:
         logging.error(f"Error registering company: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")

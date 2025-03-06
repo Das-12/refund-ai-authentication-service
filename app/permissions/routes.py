@@ -182,11 +182,11 @@ async def assign_permission(assignPermissionRequest:AssignPermissionRequest, tok
 @router.get("/get-user-permission-token")
 async def list_permissions_for_user_from_token(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     try:
-
+        print(f"this is token: {token}")
         username = decode_access_token(token)
-
+        print(f"this is username: {username}")
         user = get_user(db, username=username)
-
+        print(f"this is user: {user}")
         if user is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -196,7 +196,7 @@ async def list_permissions_for_user_from_token(token: str = Depends(oauth2_schem
         return {"username": user.username, "permissions": get_user_permissions(user)}
     except Exception as e:
         logging.error(f"Error getting user permissions: {str(e)}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 @router.get("/permissions/{user_name}")
 async def list_permissions_for_user(user_name:str, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
