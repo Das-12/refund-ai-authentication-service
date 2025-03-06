@@ -33,7 +33,7 @@ async def list_plans(token: str = Depends(oauth2_scheme), db: Session = Depends(
     try:
         return list_plans_service(token, db)
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 @router.get("/plans/{plan_id}", tags=["plans"])
 async def get_plan(plan_id: int, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
