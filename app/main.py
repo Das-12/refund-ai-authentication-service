@@ -20,6 +20,7 @@ from .kafka_producer import send_app_error
 from .config import settings
 from datetime import datetime
 from zoneinfo import ZoneInfo
+from fastapi.middleware.cors import CORSMiddleware
 
 AuthBase.metadata.create_all(bind=engine)
 PermissionsBase.metadata.create_all(bind=engine)
@@ -70,7 +71,7 @@ async def lifespan(app: FastAPI):
         await close_kafka_producer()
         db.close()  # Close the session
         await database.disconnect()  # Disconnect from the database
-
+        
 def create_superadmin_user(db: Session):
     # Check if the SuperAdmin user exists
     superadmin_user = db.query(User).filter(User.username == "superadmin").first()
@@ -210,6 +211,15 @@ def create_roles_and_permissions(db:Session):
 def make_key(val:str):
     return val.replace(" ","_").lower()
 app = FastAPI(lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
