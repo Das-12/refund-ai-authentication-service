@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
+from fastapi import HTTPException
 
 from app.auth.request_models import CompanyCreate, UserOut
 from .models import Company, User,APIKey
@@ -50,21 +51,21 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
     return encoded_jwt
 
 def decode_access_token(token: str):
-    print("decode access token started")
-    try:
-        print("try block started")
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        print(f"this is payload: {payload}")
-        username: str = payload.get("sub")
-        if username is None:
-            raise JWTError
-        return username
-    except JWTError:
-        print("except block started")
-        return None
+    # print("decode access token started")
+        # print("try block started")
+    payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+    print(f"this is payload: {payload}")
+    username: str = payload.get("sub")
+    if username is None:
+       raise HTTPException(status_code=404, detail="user not found from token")
+    return username
 
 def get_user(db: Session, username: str):
-    return db.query(User).filter(User.username == username).first()
+    if username is not None:
+        data = db.query(User).filter(User.username == username).first()
+        return data
+    else:
+        raise HTTPException(status_code=404, detail="username not found")
 
 def get_company(db: Session, phone_number: str):
     return db.query(Company).filter(Company.phone_number == phone_number).first()
