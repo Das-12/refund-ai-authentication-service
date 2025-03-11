@@ -22,31 +22,36 @@ async def create_role(role: RoleRequest, token: str = Depends(oauth2_scheme),db:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Insufficient permissions",
             )
-
-        role = Role(name=role.name, description=role.description)
-        db.add(role)
-        db.commit()
-        db.refresh(role)
-        return role
+        existing_role = db.query(Role).filter(Role.name == role.name).first()
+        if existing_role:
+            raise HTTPException(status_code=409, detail=f"Role with the name {role.name} already exists")
+        else:
+            role = Role(name=role.name, description=role.description)
+            db.add(role)
+            db.commit()
+            db.refresh(role)
+            return role
     except Exception as e:
         logging.error(f"Error creating role: {str(e)}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 @router.get("/roles")
 async def list_roles(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    try:
-        user = get_user(db, username=decode_access_token(token))
-        if not has_permission(user, "view_roles"):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Insufficient permissions",
-            )
+    user = get_user(db, username=decode_access_token(token))
+    if not has_permission(user, "view_roles"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions",
+        )
 
+    try:
+        print("roles try block started")
         roles = db.query(Role).all()
         return roles
     except Exception as e:
+        print("roles except block started")
         logging.error(f"Error listing roles: {str(e)}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 @router.post("/assign-role")
 async def assign_role(roleRequest:AssignRoleRequest, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
