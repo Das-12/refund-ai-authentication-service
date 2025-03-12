@@ -1,8 +1,9 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Table
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Table, Boolean
 from ..database import Base
 from pydantic import BaseModel
 from sqlalchemy.orm import relationship
 from datetime import datetime
+from typing import Optional, List
 
 # Association table for many-to-many relationship between users and roles
 user_roles = Table(
@@ -26,6 +27,7 @@ class Role(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(50), unique=True)
     description = Column(String(255))
+    is_active = Column(Boolean, default=True)
     users = relationship("User", secondary=user_roles, back_populates="roles")
     permissions = relationship("Permission", secondary=role_permissions, back_populates="roles")
     
@@ -44,13 +46,13 @@ class Permission(Base):
         return f"Permission(name={self.name})"
 
 class RoleRequest(BaseModel):
-    name: str
-    description: str
+    name: Optional[str] = None
+    description: Optional[str] = None
 
 class AssignRoleRequest(BaseModel):
     username: str
     role_name: str
 
 class AssignPermissionRequest(BaseModel):
-    role_name: str
-    permission_name: str
+    role_id: int
+    permission_id: Optional[List[int]] = None
