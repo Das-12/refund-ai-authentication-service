@@ -4,6 +4,10 @@ dist/
 /env
 venv/
 __pycache__/
+__pycache__
+/__pycache__
+
+*.pyc
 logs/
 # Compiled Java class files
 *.class
@@ -50,7 +54,4 @@ Thumbs.db
 
 .vscode
 
-config.py
-config.py
-
-alembic.ini
+/config.py
