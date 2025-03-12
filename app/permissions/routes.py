@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from fastapi.security import OAuth2PasswordBearer
-from .permissions import assign_permission_to_role,get_user_roles,assign_role_to_user,has_permission, get_user_permissions
+from .permissions import assign_permission_to_role,get_user_roles,assign_role_to_user,has_permission, get_user_permissions, update_role, delete_role
 from .models import AssignPermissionRequest, AssignRoleRequest, RoleRequest, Role, Permission
 from ..database import get_db
 from ..auth import decode_access_token, get_user
@@ -96,6 +96,7 @@ async def list_roles_for_user_from_token(token: str = Depends(oauth2_scheme), db
 
 @router.get("/roles/{user_name}")
 async def list_roles_for_user(user_name:str, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    print("list roles started in auth")
     try:
         request_username = decode_access_token(token)
         request_user = get_user(db, username=request_username)
@@ -120,11 +121,86 @@ async def list_roles_for_user(user_name:str, token: str = Depends(oauth2_scheme)
             )
 
         return {"username": user_name, "roles": get_user_roles(user)}
+    
+    except HTTPException as http_exc:
+        # If an expected HTTPException occurs, re-raise it as is
+        raise http_exc
+
     except Exception as e:
-        logging.error(f"Error getting user roles: {str(e)}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        # Log the actual error and return an internal server error response
+        logging.error(f"Unexpected error getting user roles: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+            detail={str(e)}  # Return the actual error message
+        )
+        
 
+@router.put("/update_role/{role_id}", response_model=dict)
+async def update_role_auth_endpoint(role_id : int, role_data: RoleRequest, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    try:
+        request_username = decode_access_token(token)
+        request_user = get_user(db, username=request_username)
+        if request_user is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Invalid Token",
+            )
 
+        if not has_permission(request_user, "update_role"):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Insufficient permissions",
+            )
+        
+        updated_role = update_role(role_id=role_id, role_data=role_data, db=db)
+        
+        if updated_role == True:
+            return {"message": f"successfully updated role with role id {role_id}"}
+        print(f"update_role in auth {updated_role}")
+    except HTTPException as http_exc:
+        # If an expected HTTPException occurs, re-raise it as is
+        raise http_exc
+
+    except Exception as e:
+        # Log the actual error and return an internal server error response
+        logging.error(f"Unexpected error getting user roles: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+            detail={str(e)}  # Return the actual error message
+        )
+        
+@router.delete("/delete_role/{role_id}", response_model=dict)
+async def delete_role_auth_endpoint(role_id: int, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    try:
+        request_username = decode_access_token(token)
+        request_user = get_user(db, username=request_username)
+        if request_user is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Invalid Token",
+            )
+
+        if not has_permission(request_user, "delete_role"):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Insufficient permissions",
+            )
+        
+        delete = delete_role(role_id, db)
+        
+        if delete == True:
+            return {"message": f"Operation completed successfully"}
+    except HTTPException as http_exc:
+        # If an expected HTTPException occurs, re-raise it as is
+        raise http_exc
+
+    except Exception as e:
+        # Log the actual error and return an internal server error response
+        logging.error(f"Unexpected error getting user roles: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+            detail={str(e)}  # Return the actual error message
+        )
 
 # Permissions
 
@@ -178,7 +254,7 @@ async def assign_permission(assignPermissionRequest:AssignPermissionRequest, tok
                 detail="Insufficient permissions",
             )
 
-        role = assign_permission_to_role(db, assignPermissionRequest.role_name, assignPermissionRequest.permission_name)
+        role = assign_permission_to_role(db, assignPermissionRequest.role_id, assignPermissionRequest.permission_id)
         return {"role": role.name, "permissions": [permission.name for permission in role.permissions]}
     except Exception as e:
         logging.error(f"Error assigning permission: {str(e)}")
