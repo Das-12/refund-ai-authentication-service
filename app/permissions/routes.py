@@ -2,10 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from fastapi.security import OAuth2PasswordBearer
 from .permissions import assign_permission_to_role,get_user_roles,assign_role_to_user,has_permission, get_user_permissions, update_role, delete_role
-from .models import AssignPermissionRequest, AssignRoleRequest, RoleRequest, Role, Permission
+from .models import AssignPermissionRequest, AssignRoleRequest, RoleRequest, Role, Permission, RoleOut
 from ..database import get_db
 from ..auth import decode_access_token, get_user
 import logging
+from sqlalchemy.orm import joinedload
 
 router = APIRouter()
 
@@ -45,11 +46,11 @@ async def list_roles(token: str = Depends(oauth2_scheme), db: Session = Depends(
         )
 
     try:
-        print("roles try block started")
+        # print("roles try block started")
         roles = db.query(Role).all()
         return roles
     except Exception as e:
-        print("roles except block started")
+        # print("roles except block started")
         logging.error(f"Error listing roles: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
@@ -134,6 +135,10 @@ async def list_roles_for_user(user_name:str, token: str = Depends(oauth2_scheme)
             detail={str(e)}  # Return the actual error message
         )
         
+@router.get("/get_role_by_id/{role_id}")
+async def get_role_by_id_endpoint(role_id: int, db: Session = Depends(get_db)):
+    role = db.query(Role).options(joinedload(Role.permissions)).filter(Role.id == role_id).first()
+    return role
 
 @router.put("/update_role/{role_id}", response_model=dict)
 async def update_role_auth_endpoint(role_id : int, role_data: RoleRequest, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
@@ -311,6 +316,7 @@ async def list_permissions_for_user(user_name:str, token: str = Depends(oauth2_s
     except Exception as e:
         logging.error(f"Error getting user permissions: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+    
 
 @router.get("/cause-error")
 async def cause_error():

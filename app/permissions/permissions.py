@@ -80,9 +80,8 @@ def assign_permission_to_role(db: Session, role_id: int, permission_ids: List[in
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"One or more permissions not found",
         )
-    for permission in permissions:
-        if permission not in role.permissions:
-            role.permissions.append(permission)
+    role.permissions = permissions
+    
     db.commit()
     db.refresh(role)
     return role

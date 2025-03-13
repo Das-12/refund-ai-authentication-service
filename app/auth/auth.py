@@ -51,7 +51,7 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
     return encoded_jwt
 
 def decode_access_token(token: str):
-    # print("decode access token started")
+    print(f"decode access token started and this is token {token}")
         # print("try block started")
     payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
     print(f"this is payload: {payload}")
