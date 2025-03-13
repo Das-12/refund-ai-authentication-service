@@ -186,10 +186,12 @@ async def read_users_me(token: str = Depends(oauth2_scheme), db: Session = Depen
 async def verify_token(token_request: TokenVerificationRequest, db: Session = Depends(get_db)):
     try:
         token_data = decode_access_token(token_request.token)
+        print(f"token data is {token_data}")
         if token_data is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
         
         user = get_user(db, username=token_data)
+        
         if user is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
 

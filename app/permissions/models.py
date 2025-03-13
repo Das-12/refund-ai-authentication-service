@@ -4,6 +4,8 @@ from pydantic import BaseModel
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from typing import Optional, List
+from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.sql import select, func
 
 # Association table for many-to-many relationship between users and roles
 user_roles = Table(
@@ -34,6 +36,26 @@ class Role(Base):
     def __str__(self):
         return f"Role(name={self.name})"
     
+    @hybrid_property
+    def permission_names(self):
+        """Returns a list of permission names associated with the role."""
+        return [permission.name for permission in self.permissions]
+
+    @permission_names.expression
+    def permission_names(cls):
+        """Returns a subquery expression to fetch permission names."""
+        return (
+            select(func.array_agg(Permission.name))
+            .where(Permission.id == role_permissions.c.permission_id)
+            .where(role_permissions.c.role_id == cls.id)
+            .as_scalar()
+        )
+
+    def __str__(self):
+        return f"Role(name={self.name})"
+    
+
+    
 class Permission(Base):
     __tablename__ = "permissions"
 
@@ -48,6 +70,9 @@ class Permission(Base):
 class RoleRequest(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
+    
+class RoleOut(RoleRequest):
+    id: int
 
 class AssignRoleRequest(BaseModel):
     username: str
