@@ -23,6 +23,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 @router.post("/plans", tags=["plans"])
 async def create_plan(plan: PlanCreate, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    # print("plans in auth subscription started")
     try:
         return create_plan_service(plan, token, db)
     except Exception as e:
@@ -60,6 +61,7 @@ async def delete_plan(plan_id: int, token: str = Depends(oauth2_scheme), db: Ses
 
 @router.post("/subscriptions", tags=["subscriptions"])
 async def create_subscription(subscription: SubscriptionCreate, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    print("subscrition in subscription started")
     try:
         return create_subscription_service(subscription, token, db)
     except Exception as e:
