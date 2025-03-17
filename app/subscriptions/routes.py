@@ -65,7 +65,7 @@ async def create_subscription(subscription: SubscriptionCreate, token: str = Dep
     try:
         return create_subscription_service(subscription, token, db)
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 @router.get("/subscriptions", tags=["subscriptions"])
 async def list_subscriptions(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):

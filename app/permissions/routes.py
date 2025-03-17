@@ -47,7 +47,8 @@ async def list_roles(token: str = Depends(oauth2_scheme), db: Session = Depends(
 
     try:
         # print("roles try block started")
-        roles = db.query(Role).all()
+        # roles = db.query(Role).all()
+        roles = db.query(Role).options(joinedload(Role.permissions)).all()
         return roles
     except Exception as e:
         # print("roles except block started")
