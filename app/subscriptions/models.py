@@ -57,7 +57,8 @@ class Subscription(Base):
         db = SessionLocal()
         plan = db.query(Plans).filter(Plans.id == plan_id).first()
         db.close()
-
+        if start_date is None:
+            start_date = datetime.now(IST)
         if plan and plan.type_of_subscription.lower() == "monthly":
             return start_date + timedelta(days=30)
         elif plan and plan.type_of_subscription.lower() == "yearly":
