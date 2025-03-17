@@ -41,9 +41,9 @@ def create_plan_service(plan_data: PlanCreate, token: str, db: Session):
     return new_plan
 
 def list_plans_service(token: str, db: Session):
-    
+    print(f"started list plan in auth and this is {token}")
     username = decode_access_token(token)
-    
+    print(f"this is username {username}")
     if not username:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
