@@ -159,7 +159,7 @@ async def register(company: CompanyCreate,token: str = Depends(oauth2_scheme), d
         return {"status":True,"message":"Company Created Successfully","company_id":new_company.id}
     except Exception as e:
         logging.error(f"Error registering company: {str(e)}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 @router.get("/users/me")
 async def read_users_me(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
