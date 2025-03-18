@@ -71,6 +71,7 @@ async def login(form_data: LoginRequest, db: Session = Depends(get_db)):
 
 @router.post("/register/user",status_code=status.HTTP_201_CREATED)
 async def register_user(user: UserCreate,token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    print("register user started")
     try:
         username=decode_access_token(token)
         if username is None:
@@ -121,7 +122,7 @@ async def register_user(user: UserCreate,token: str = Depends(oauth2_scheme), db
             )
     except Exception as e:
         logging.error(f"Error registering user: {str(e)}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 @router.post("/register/company",status_code=status.HTTP_201_CREATED)
 async def register(company: CompanyCreate,token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
