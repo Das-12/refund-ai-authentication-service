@@ -29,6 +29,7 @@ class UserUpdate(BaseModel):
     password: Optional[str] = Field(default=None)
     
 class UserOut(BaseModel):
+    id: int
     username: Optional[str] = None
     company_id: Optional[int] = None
 

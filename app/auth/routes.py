@@ -192,15 +192,16 @@ async def verify_token(token_request: TokenVerificationRequest, db: Session = De
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
         
         user = get_user(db, username=token_data)
-        
+        print(f"user is {user}")
         if user is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
-
+        print(f"this is user role {[role.name for role in user.roles]}")
         if "super_admin" not in [role.name for role in user.roles]:
+            print(f"if super_admin started")
             company = get_company_with_apikey(db, token_request.api_key)
             if company.id != user.company.id:
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="API Key Expired or Invalid")
-            
+        print("end of the verify token")
         return {"username": user.username, "role": user.roles[0].name}
     except Exception as e:
         logging.error(f"Error verifying token: {str(e)}")
