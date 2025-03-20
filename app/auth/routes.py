@@ -396,7 +396,7 @@ async def get_all_user_endpoint(token: str = Depends(oauth2_scheme), db: Session
         )
     except Exception as e:
         logging.error(f"Error getting all users: {str(e)}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     
 @router.put("/update_user/{user_id}", response_model=UserOut)
 async def update_user_endpoint(user_id: int, user: UserUpdate, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
