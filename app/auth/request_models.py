@@ -31,7 +31,7 @@ class UserUpdate(BaseModel):
 class UserOut(BaseModel):
     id: int
     username: Optional[str] = None
-    company_id: Optional[int] = None
+    company_name: Optional[str] = None
 
 class ApiRequest(BaseModel):
     api_key: str
