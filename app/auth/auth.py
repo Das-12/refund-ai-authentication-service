@@ -9,6 +9,7 @@ from .models import Company, User,APIKey
 from ..config import settings
 import secrets
 from sqlalchemy.orm import Session
+from app.auth.request_models import UserOut
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -169,12 +170,23 @@ def get_user_by_id(user_id: int, db: Session):
     else:
         return data
 
+# def get_all_users(db: Session):
+#     users = db.query(User).all()
+#     for user in users:
+#         if user.is_active == False:
+#             users.remove(user)
+#     return UserOut(id=user.id, username=user.username, company_name=user.company.company_name)
+
 def get_all_users(db: Session):
-    users = db.query(User).all()
-    for user in users:
-        if user.is_active == False:
-            users.remove(user)
-    return users
+    users = db.query(User).filter(User.is_active == True).all()  # Fetch only active users
+    return [
+        UserOut(
+            id=user.id,
+            username=user.username,
+            company_name=user.company.company_name if user.company else None  # Handle None
+        )
+        for user in users
+    ]
 
 def update_user(user_id: int, username: str, password: str, db: Session):
     user = db.query(User).filter(User.id == user_id).first()
