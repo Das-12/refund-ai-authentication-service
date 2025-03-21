@@ -146,8 +146,10 @@ def delete_plan_service(plan_id: int, token: str, db: Session):
             detail="Insufficient permissions",
         )
 
-    db.query(Plans).filter(Plans.id == plan_id).delete()
+    delete = db.query(Plans).filter(Plans.id == plan_id).first()
+    delete.is_deleted = True
     db.commit()
+    db.refresh(delete)
     
     return {"message": "Plan deleted successfully"}
 
