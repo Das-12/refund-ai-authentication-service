@@ -67,7 +67,7 @@ async def login(form_data: LoginRequest, db: Session = Depends(get_db)):
         return {"access_token": access_token, "token_type": "bearer","api_key":user.company.api_keys.key}
     except Exception as e:
         logging.error(f"Error logging in: {str(e)}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 @router.post("/register/user",status_code=status.HTTP_201_CREATED)
 async def register_user(user: UserCreate,token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
@@ -207,10 +207,10 @@ async def verify_token(token_request: TokenVerificationRequest, db: Session = De
         logging.error(f"Error verifying token: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
-@router.post("/get_company")
-async def get_all_company_endpoint(token_request: TokenRequest, db: Session = Depends(get_db)):
+@router.get("/get_company")
+async def get_all_company_endpoint(token_request: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     try:
-        username = decode_access_token(token_request.token)
+        username = decode_access_token(token_request)
         if username is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -235,10 +235,10 @@ async def get_all_company_endpoint(token_request: TokenRequest, db: Session = De
         logging.error(f"Error getting all companies: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
-@router.post("/get_company/{company_id}")
-async def get_company_endpoint(token_request: TokenRequest,company_id: int, db: Session = Depends(get_db)):
+@router.get("/get_company/{company_id}")
+async def get_company_endpoint(company_id: int, token_request: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     try:
-        username = decode_access_token(token_request.token)
+        username = decode_access_token(token_request)
         if username is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,

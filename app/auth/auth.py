@@ -77,7 +77,7 @@ def get_company_with_apikey(db: Session, token: str):
 
 def authenticate_user(db: Session, username: str, password: str):
     user = get_user(db, username)
-    if user.is_active == False:
+    if user and user.is_active == False:
         return None
     if not user or not verify_password(password, user.hashed_password):
         return None
