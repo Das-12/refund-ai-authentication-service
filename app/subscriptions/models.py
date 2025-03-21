@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Table, CheckConstraint, UniqueConstraint
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Table, CheckConstraint, UniqueConstraint, Boolean
 from ..database import Base
 from pydantic import BaseModel
 from sqlalchemy.orm import relationship
@@ -20,6 +20,7 @@ class Plans(Base):
     additional_price_per_request = Column(Integer)
     max_request = Column(Integer)
     type_of_subscription = Column(String(50))
+    is_deleted = Column(Boolean, default=False)
     
     __table_args__ = (
         CheckConstraint("type_of_subscription IN ('monthly', 'yearly')", name="valid_subscription_type"),
