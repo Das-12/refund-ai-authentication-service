@@ -2,11 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from fastapi.security import OAuth2PasswordBearer
 from ..database import get_db
-from .schemas import PlanCreate, PlanUpdate, SubscriptionCreate, SubscriptionUpdate
+from .schemas import PlanCreate, PlanUpdate, SubscriptionCreate, SubscriptionUpdate, Plan
+from typing import List
 from .services import (
     create_plan_service,
     list_plans_service,
     get_plan_by_id_service,
+    get_plan_by_company_id_service,
     update_plan_service,
     delete_plan_service,
     create_subscription_service,
@@ -41,6 +43,15 @@ async def get_plan(plan_id: int, token: str = Depends(oauth2_scheme), db: Sessio
     try:
         return get_plan_by_id_service(plan_id, token, db)
     except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+    
+@router.get("/company/plans/{company_id}", tags=["plans"])
+async def get_plans_by_company_id(company_id: int, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    try:
+        print("get_plans_by_company_id started")
+        return get_plan_by_company_id_service(company_id, token, db)
+    except Exception as e:
+        print(f"Error in get_plans_by_company_id: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 @router.put("/plans/{plan_id}", tags=["plans"])
