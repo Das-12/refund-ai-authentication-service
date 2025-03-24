@@ -9,7 +9,7 @@ from app.permissions.models import Role
 from app.permissions.permissions import has_permission
 from .auth import (authenticate_user, create_access_token, create_company, create_user, get_company, get_company_with_apikey, get_user,
                    decode_access_token,get_api_key,create_api_key, is_api_key_valid, get_all_company, get_company_by_id, update_company,
-                   update_user, delete_company, get_user_by_id, get_all_users)
+                   update_user, delete_company, get_user_by_id, get_all_users, get_user_by_company_id,)
 from ..database import get_db
 from .request_models import ApiRequest, CompanyCreate, LoginRequest, TokenVerificationRequest, UserCreate, TokenRequest, UpdateCompany, UserOut, UserUpdate
 import logging
@@ -197,7 +197,6 @@ async def verify_token(token_request: TokenVerificationRequest, db: Session = De
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
         print(f"this is user role {[role.name for role in user.roles]}")
         if "super_admin" not in [role.name for role in user.roles]:
-            print(f"if super_admin started")
             company = get_company_with_apikey(db, token_request.api_key)
             if company.id != user.company.id:
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="API Key Expired or Invalid")
@@ -351,6 +350,35 @@ async def get_user_endpoint(user_id: int,token: str = Depends(oauth2_scheme), db
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="you can only view the user under your company",
             )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Insufficient permissions",
+            )
+    except Exception as e:
+        logging.error(f"Error getting user: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+    
+
+@router.get("/get_user_by_company_id/{company_id}", response_model=List[UserOut])
+async def get_staff_endpoint(company_id: int,token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    try:
+        username = decode_access_token(token)
+        if username is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authentication credentials",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        request_user = get_user(db, username)
+        if request_user is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found",
+            )
+        if has_permission(request_user, "get_users_under_company"):
+            user_obj = get_user_by_company_id(company_id, db)
+            return user_obj
         else:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,

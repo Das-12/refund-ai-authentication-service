@@ -85,6 +85,33 @@ def get_plan_by_id_service(plan_id: int, token: str, db: Session):
         )
     return plan
 
+
+def get_plan_by_company_id_service(company_id: int, token: str, db: Session):
+    username = decode_access_token(token)
+    
+    if not username:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token or expired token",
+        )
+
+    user = get_user(db, username=username)
+    
+    if not has_permission(user, "view_plans"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions",
+        )
+
+    plan = db.query(Plans).filter(Plans.subscriptions.any(company_id = company_id)).first()
+    print(f"this is plan {plan}")
+    if not plan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Plans not found",
+        )
+    return plan
+
 def update_plan_service(plan_id: int, plan_data: PlanUpdate, token: str, db: Session):
     username = decode_access_token(token)
     

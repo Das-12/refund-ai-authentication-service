@@ -151,6 +151,7 @@ def create_roles_and_permissions(db:Session):
             "Delete Company",
             "Delete User",
             "View Company",
+            "Get Users Under Company",
             "View User",
             "Create Permission",
             "Create Role",

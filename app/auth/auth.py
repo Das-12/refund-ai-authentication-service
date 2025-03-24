@@ -169,6 +169,10 @@ def get_user_by_id(user_id: int, db: Session):
         return None
     else:
         return data
+    
+def get_user_by_company_id(company_id: int, db: Session):
+    data = db.query(User).filter(User.company_id == company_id, User.is_active != False).all()
+    return data
 
 # def get_all_users(db: Session):
 #     users = db.query(User).all()
