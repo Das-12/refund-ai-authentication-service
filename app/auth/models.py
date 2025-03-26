@@ -30,7 +30,7 @@ class User(Base):
     # Many-to-One relationship with Company
     company = relationship("Company", back_populates="users")
     roles = relationship("Role", secondary="user_roles", back_populates="users")
-    
+    subscription_counts = relationship("UserSubscriptionCount", back_populates="user", cascade="all, delete-orphan")
 
 class APIKey(Base):
     __tablename__ = "api_keys"
