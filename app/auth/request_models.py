@@ -32,6 +32,7 @@ class UserOut(BaseModel):
     id: int
     username: Optional[str] = None
     company_name: Optional[str] = None
+    hit_count: Optional[int] = None
 
 class ApiRequest(BaseModel):
     api_key: str
