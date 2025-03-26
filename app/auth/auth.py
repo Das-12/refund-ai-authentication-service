@@ -3,6 +3,7 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
+from sqlalchemy.orm import joinedload
 
 from app.auth.request_models import CompanyCreate, UserOut
 from .models import Company, User,APIKey
@@ -10,6 +11,8 @@ from ..config import settings
 import secrets
 from sqlalchemy.orm import Session
 from app.auth.request_models import UserOut
+from app.subscriptions.models import Subscription
+from sqlalchemy import func
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -128,11 +131,23 @@ def is_api_key_valid(apiKeys:list[APIKey], key: str) -> bool:
 
 
 def get_all_company(db: Session):
-    data = db.query(Company).all()
+    data = db.query(Company).options(joinedload(Company.subscription)).all()
     for user in data:
         if user.is_active == False:
             data.remove(user)
-    return data
+    return [
+        {
+			"email": d.email,
+			"phone_number": d.phone_number,
+			"is_active": d.is_active,
+			"id": d.id,
+			"company_name": d.company_name,
+			"contact_person_name": d.contact_person_name,
+			"secondary_phone_number": d.secondary_phone_number,
+            "hit_count": d.subscription.total_count if d.subscription else 0
+		}
+        for d in data
+    ]
 
 
 def get_company_by_id(company_id: int, db: Session):
@@ -182,12 +197,14 @@ def get_user_by_company_id(company_id: int, db: Session):
 #     return UserOut(id=user.id, username=user.username, company_name=user.company.company_name)
 
 def get_all_users(db: Session):
-    users = db.query(User).filter(User.is_active == True).all()  # Fetch only active users
+    users = db.query(User).filter(User.is_active == True).options(joinedload(User.subscription_counts)).all()  # Fetch only active users
     return [
         UserOut(
             id=user.id,
             username=user.username,
-            company_name=user.company.company_name if user.company else None  # Handle None
+            company_name=user.company.company_name if user.company else None,  # Handle None
+            hit_count=(sorted(user.subscription_counts, key=lambda x: (x.year, x.month), reverse=True)[0].request_count
+            if user.subscription_counts else 0)  # Get the latest count
         )
         for user in users
     ]
@@ -201,3 +218,12 @@ def update_user(user_id: int, username: str, password: str, db: Session):
     db.commit()
     db.refresh(user)
     return user
+
+
+def get_header_data(db: Session):
+    total_company = db.query(Company).filter(Company.is_active == True).count()
+    total_hit_count = db.query(func.sum(Subscription.total_count)).scalar() 
+    return {
+        "total_company": total_company,
+        "total_hit_count": total_hit_count
+    }
