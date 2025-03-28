@@ -11,7 +11,7 @@ from ..config import settings
 import secrets
 from sqlalchemy.orm import Session
 from app.auth.request_models import UserOut
-from app.subscriptions.models import Subscription
+from app.subscriptions.models import Subscription, UserSubscriptionCount
 from sqlalchemy import func
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -220,10 +220,20 @@ def update_user(user_id: int, username: str, password: str, db: Session):
     return user
 
 
-def get_header_data(db: Session):
+def get_company_header_data(db: Session):
     total_company = db.query(Company).filter(Company.is_active == True).count()
     total_hit_count = db.query(func.sum(Subscription.total_count)).scalar() 
     return {
         "total_company": total_company,
+        "total_hit_count": total_hit_count
+    }
+    
+    
+def get_user_header_data(db: Session):
+    total_user = db.query(User).filter(User.is_active == True).count()
+    total_hit_count = db.query(func.sum(UserSubscriptionCount.request_count)).scalar() 
+    total_hit_count = total_hit_count if total_hit_count is not None else 0
+    return {
+        "total_user": total_user,
         "total_hit_count": total_hit_count
     }
