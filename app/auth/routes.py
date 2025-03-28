@@ -9,7 +9,7 @@ from app.permissions.models import Role
 from app.permissions.permissions import has_permission
 from .auth import (authenticate_user, create_access_token, create_company, create_user, get_company, get_company_with_apikey, get_user,
                    decode_access_token,get_api_key,create_api_key, is_api_key_valid, get_all_company, get_company_by_id, update_company,
-                   update_user, delete_company, get_user_by_id, get_all_users, get_user_by_company_id,get_header_data)
+                   update_user, delete_company, get_user_by_id, get_all_users, get_user_by_company_id,get_company_header_data,get_user_header_data)
 from ..database import get_db
 from .request_models import ApiRequest, CompanyCreate, LoginRequest, TokenVerificationRequest, UserCreate, TokenRequest, UpdateCompany, UserOut, UserUpdate
 import logging
@@ -504,9 +504,9 @@ async def delete_user_endpoint(user_id: int, token: str = Depends(oauth2_scheme)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
     
     
-@router.get("/header_api_first")
-async def header_api_first(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    print("header api first in auth started")
+@router.get("/header_api_company")
+async def header_api_company(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    print("header api company in auth started")
     
     try:
         username = decode_access_token(token)
@@ -523,7 +523,33 @@ async def header_api_first(token: str = Depends(oauth2_scheme), db: Session = De
                 detail="User not found",
             )
         
-        header_data = get_header_data(db)
+        header_data = get_company_header_data(db)
         return header_data
     except Exception as e:
-        logging.error(f"Error getting header data: {str(e)}")
+        logging.error(f"Error getting company header data: {str(e)}")
+        
+        
+        
+@router.get("/header_api_user")
+async def header_api_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    print("header api user in auth started")
+    
+    try:
+        username = decode_access_token(token)
+        if username is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authentication credentials",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        request_user = get_user(db, username)
+        if request_user is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found",
+            )
+        
+        header_data = get_user_header_data(db)
+        return header_data
+    except Exception as e:
+        logging.error(f"Error getting user header data: {str(e)}")
