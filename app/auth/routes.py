@@ -9,7 +9,8 @@ from app.permissions.models import Role
 from app.permissions.permissions import has_permission
 from .auth import (authenticate_user, create_access_token, create_company, create_user, get_company, get_company_with_apikey, get_user,
                    decode_access_token,get_api_key,create_api_key, is_api_key_valid, get_all_company, get_company_by_id, update_company,
-                   update_user, delete_company, get_user_by_id, get_all_users, get_user_by_company_id,get_company_header_data,get_user_header_data)
+                   update_user, delete_company, get_user_by_id, get_all_users, get_user_by_company_id,get_company_header_data,get_user_header_data,
+                   get_company_homepage_data)
 from ..database import get_db
 from .request_models import ApiRequest, CompanyCreate, LoginRequest, TokenVerificationRequest, UserCreate, TokenRequest, UpdateCompany, UserOut, UserUpdate
 import logging
@@ -553,3 +554,27 @@ async def header_api_user(token: str = Depends(oauth2_scheme), db: Session = Dep
         return header_data
     except Exception as e:
         logging.error(f"Error getting user header data: {str(e)}")
+        
+        
+@router.get("/get_company_homepage_data")
+async def get_company_homepage_data_auth(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    # print("get company homepage data started")
+    try:
+        username = decode_access_token(token)
+        if username is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authentication credentials",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        request_user = get_user(db, username)
+        if request_user is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found",
+            )
+        
+        header_data = get_company_homepage_data(db, request_user)
+        return header_data
+    except Exception as e:
+        logging.error(f"Error getting company homepage data: {str(e)}")
