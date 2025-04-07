@@ -237,3 +237,40 @@ def get_user_header_data(db: Session):
         "total_user": total_user,
         "total_hit_count": total_hit_count
     }
+    
+
+def get_company_homepage_data(db: Session, user: User):
+    
+    company = db.query(Subscription).filter(Subscription.company_id == user.company_id).first()
+    
+    if company and company.plan and company.plan.max_request is not None:
+        remaining_hits = company.plan.max_request - company.total_count
+        total_additional_hits = abs(remaining_hits) if remaining_hits < 0 else 0
+    else:
+        total_additional_hits = 0
+        
+    employee_count = db.query(User).filter(User.company_id == user.company_id).count()
+    
+    assigned_limit_of_hits = company.plan.max_request if company and company.plan else 0
+    used_hits = company.total_count if company else 0
+    
+    balance_hits = assigned_limit_of_hits - used_hits if company else 0
+    if balance_hits < 0:
+        balance_hits = 0
+        
+    price_per_request = company.plan.additional_price_per_request if company and company.plan else 0
+    
+    total_amount = total_additional_hits * price_per_request if company and company.plan else 0
+    if total_amount < 0:
+        total_amount = 0
+        
+    return {
+        "total_additional_hits": total_additional_hits,
+        "employee_count": employee_count,
+        "assigned_limit_of_hits": assigned_limit_of_hits,
+        "used_hits": used_hits,
+        "balance_hits": balance_hits,
+        "price_per_request": price_per_request,
+        "total_amount": total_amount
+    }
+    
