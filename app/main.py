@@ -1,3 +1,4 @@
+
 from fastapi import FastAPI, Request
 from app.kafka_producer import close_kafka_producer, init_kafka_producer
 from sqlalchemy.orm import Session
