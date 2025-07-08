@@ -154,5 +154,5 @@ app = FastAPI(lifespan=lifespan)
 
 app.include_router(auth_router, prefix="/auth")
 app.include_router(permissions_router, prefix="/permissions")
-app.add_middleware(LoggingMiddleware)
+# app.add_middleware(LoggingMiddleware)
 
