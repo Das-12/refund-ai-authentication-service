@@ -11,7 +11,7 @@ data:
   KAFKA_COUNT_TOPIC: "api_count"
   KAFKA_APP_ERROR_TOPIC: "app_error"
 
-  DB_USER: auth_user"
+  DB_USER: "auth_user"
   DB_PASSWORD: "root321"
   DB_HOST: "mysql.default.svc.cluster.local"
   DB_NAME: "auth_ai"
