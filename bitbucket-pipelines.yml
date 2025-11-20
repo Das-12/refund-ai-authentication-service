@@ -1,0 +1,61 @@
+# bitbucket-pipelines.yml
+image: docker:24.0.5
+
+options:
+  docker: true
+
+pipelines:
+  branches:
+    development:
+      - step:
+          name: Build and Push to GHCR
+          size: 2x
+          services:
+            - docker
+          script:
+            - export DOCKER_BUILDKIT=0
+            - echo "Logging into GitHub Container Registry"
+            - echo $GHCR_TOKEN | docker login ghcr.io -u $GHCR_USER --password-stdin
+            - export IMAGE=ghcr.io/$GHCR_USER/$BITBUCKET_REPO_SLUG:$BITBUCKET_COMMIT
+            - echo "Building image $IMAGE"
+            - docker build -t $IMAGE .
+            - docker push $IMAGE
+            - echo "Image name:"
+            - echo $IMAGE
+            - printf '%s' "$IMAGE" > image_name.txt
+            - echo "Saved image name:"
+            - cat image_name.txt
+          artifacts:
+            - image_name.txt
+      - step:
+          name: Deploy to Kubernetes over SSH
+          script:
+            - IMAGE=$(cat image_name.txt | xargs)
+            - echo "Image content:" 
+            - cat image_name.txt
+            - echo "Trimmed IMAGE:" $IMAGE
+            - apk add --no-cache openssh-client coreutils
+            - mkdir -p ~/.ssh
+            - (umask 077; echo "$SSH_PRIVATE_KEY" | base64 -d > ~/.ssh/id_rsa)
+            - ssh-keyscan -p 2222 -H 103.214.234.68 >> ~/.ssh/known_hosts
+            # Create directory on remote server
+            - ssh -p 2222 -i ~/.ssh/id_rsa root@103.214.234.68 "mkdir -p /tmp/auth-service-k8s"
+            # Copy k8s manifests to remote server
+            - scp -P 2222 -i ~/.ssh/id_rsa k8s/*.yaml root@103.214.234.68:/tmp/auth-service-k8s/
+            # Apply ConfigMap and Secret
+            - ssh -p 2222 -i ~/.ssh/id_rsa root@103.214.234.68 "kubectl apply -f /tmp/auth-service-k8s/configmap.yaml"
+            - ssh -p 2222 -i ~/.ssh/id_rsa root@103.214.234.68 "kubectl apply -f /tmp/auth-service-k8s/secret.yaml"
+            # Apply Service and Deployment
+            - ssh -p 2222 -i ~/.ssh/id_rsa root@103.214.234.68 "kubectl apply -f /tmp/auth-service-k8s/service.yaml"
+            - ssh -p 2222 -i ~/.ssh/id_rsa root@103.214.234.68 "kubectl apply -f /tmp/auth-service-k8s/deployment.yaml"
+            # Update deployment image - use escaped variable inside quotes
+            - ssh -p 2222 -i ~/.ssh/id_rsa root@103.214.234.68 "kubectl set image deployment/auth-service auth-service=${IMAGE} -n refundai"
+            # Wait for rollout to complete
+            - ssh -p 2222 -i ~/.ssh/id_rsa root@103.214.234.68 "kubectl rollout status deployment/auth-service -n refundai --timeout=5m"
+            # Cleanup temp files
+            - ssh -p 2222 -i ~/.ssh/id_rsa root@103.214.234.68 "rm -rf /tmp/auth-service-k8s"
+
+definitions:
+  services:
+    docker:
+      memory: 3072
