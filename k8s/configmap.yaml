@@ -4,7 +4,7 @@ metadata:
   name: auth-service-env
   namespace: refundai   
 data:
-  KAFKA_BROKER_URL: "kafka-service.kafka.svc.cluster.local:9092"
+  KAFKA_BROKER_URL: "kafka-broker.kafka.svc.cluster.local:9092"
   KAFKA_TOPIC: "auth_logging"
   KAFKA_USERNAME: ""
   KAFKA_PASSWORD: ""
