@@ -4,7 +4,7 @@ metadata:
   name: auth-service-env
   namespace: refundai   
 data:
-  KAFKA_BROKER_URL: "kafka-service.kafka.svc.cluster.local:9092"
+  KAFKA_BROKER_URL: "kafka-service.infra.svc.cluster.local:9092"
   KAFKA_TOPIC: "auth_logging"
   KAFKA_USERNAME: ""
   KAFKA_PASSWORD: ""
@@ -13,6 +13,6 @@ data:
 
   DB_USER: "auth_user"
   DB_PASSWORD: "Auth%40User321"
-  DB_HOST: "mysql.default.svc.cluster.local"
+  DB_HOST: "mysql.infra.svc.cluster.local"
   DB_NAME: "auth_ai"
   DB_PORT: "3306"            

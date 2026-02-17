@@ -1,0 +1,94 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: refundai-api-ingress
+  namespace: refundai
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/use-regex: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: refund.ecogo.ai  # Change this to your actual domain
+      http:
+        paths:
+          # Authentication Service
+          - path: /auth(/|$)(.*)
+            pathType: Prefix
+            backend:
+              service:
+                name: auth-service
+                port:
+                  number: 8000
+          
+          # Cache Service
+          - path: /cache(/|$)(.*)
+            pathType: Prefix
+            backend:
+              service:
+                name: cache-service
+                port:
+                  number: 8000
+          
+          # Count Service
+          - path: /count(/|$)(.*)
+            pathType: Prefix
+            backend:
+              service:
+                name: count-service
+                port:
+                  number: 8000
+          
+          # Currency Conversion Service
+          - path: /currency(/|$)(.*)
+            pathType: Prefix
+            backend:
+              service:
+                name: currency-service
+                port:
+                  number: 8000
+          
+          # Dashboard API Service
+          - path: /dashboard(/|$)(.*)
+            pathType: Prefix
+            backend:
+              service:
+                name: dashboard-service
+                port:
+                  number: 8000
+          
+          # GST Service
+          - path: /gst(/|$)(.*)
+            pathType: Prefix
+            backend:
+              service:
+                name: gst-service
+                port:
+                  number: 8000
+          
+          # Refund API Service
+          - path: /api(/|$)(.*)
+            pathType: Prefix
+            backend:
+              service:
+                name: refund-api-service
+                port:
+                  number: 8000
+          
+          # Log Service
+          - path: /log(/|$)(.*)
+            pathType: Prefix
+            backend:
+              service:
+                name: log-service
+                port:
+                  number: 8000
+          
+          # Frontend Service (typically served at root)
+          - path: /()(.*)
+            pathType: Prefix
+            backend:
+              service:
+                name: refund-frontend-service
+                port:
+                  number: 3000
