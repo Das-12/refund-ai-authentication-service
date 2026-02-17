@@ -14,7 +14,7 @@ spec:
         paths:
           # Authentication Service
           - path: /auth(/|$)(.*)
-            pathType: Prefix
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: auth-service
@@ -23,7 +23,7 @@ spec:
           
           # Cache Service
           - path: /cache(/|$)(.*)
-            pathType: Prefix
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: cache-service
@@ -32,7 +32,7 @@ spec:
           
           # Count Service
           - path: /count(/|$)(.*)
-            pathType: Prefix
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: count-service
@@ -41,7 +41,7 @@ spec:
           
           # Currency Conversion Service
           - path: /currency(/|$)(.*)
-            pathType: Prefix
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: currency-service
@@ -50,7 +50,7 @@ spec:
           
           # Dashboard API Service
           - path: /dashboard(/|$)(.*)
-            pathType: Prefix
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: dashboard-service
@@ -59,7 +59,7 @@ spec:
           
           # GST Service
           - path: /gst(/|$)(.*)
-            pathType: Prefix
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: gst-service
@@ -68,7 +68,7 @@ spec:
           
           # Refund API Service
           - path: /api(/|$)(.*)
-            pathType: Prefix
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: refund-api-service
@@ -77,7 +77,7 @@ spec:
           
           # Log Service
           - path: /log(/|$)(.*)
-            pathType: Prefix
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: log-service
@@ -86,7 +86,7 @@ spec:
           
           # Frontend Service (typically served at root)
           - path: /()(.*)
-            pathType: Prefix
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: refund-frontend-service
