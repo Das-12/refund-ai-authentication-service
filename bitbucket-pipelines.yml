@@ -37,23 +37,23 @@ pipelines:
             - apk add --no-cache openssh-client coreutils
             - mkdir -p ~/.ssh
             - (umask 077; echo "$SSH_PRIVATE_KEY" | base64 -d > ~/.ssh/id_rsa)
-            - ssh-keyscan -p 2222 -H 103.214.234.68 >> ~/.ssh/known_hosts
+            - ssh-keyscan -p 2142 -H 103.214.234.68 >> ~/.ssh/known_hosts
             # Create directory on remote server
-            - ssh -p 2222 -i ~/.ssh/id_rsa root@103.214.234.68 "mkdir -p /tmp/auth-service-k8s"
+            - ssh -p 2142 -i ~/.ssh/id_rsa deployer@103.214.234.68 "mkdir -p /tmp/auth-service-k8s"
             # Copy k8s manifests to remote server
-            - scp -P 2222 -i ~/.ssh/id_rsa k8s/*.yaml root@103.214.234.68:/tmp/auth-service-k8s/
+            - scp -P 2142 -i ~/.ssh/id_rsa k8s/*.yaml deployer@103.214.234.68:/tmp/auth-service-k8s/
             # Apply ConfigMap and Secret
-            - ssh -p 2222 -i ~/.ssh/id_rsa root@103.214.234.68 "kubectl apply -f /tmp/auth-service-k8s/configmap.yaml"
-            - ssh -p 2222 -i ~/.ssh/id_rsa root@103.214.234.68 "kubectl apply -f /tmp/auth-service-k8s/secret.yaml"
+            - ssh -p 2142 -i ~/.ssh/id_rsa deployer@103.214.234.68 "kubectl apply -f /tmp/auth-service-k8s/configmap.yaml"
+            - ssh -p 2142 -i ~/.ssh/id_rsa deployer@103.214.234.68 "kubectl apply -f /tmp/auth-service-k8s/secret.yaml"
             # Apply Service and Deployment
-            - ssh -p 2222 -i ~/.ssh/id_rsa root@103.214.234.68 "kubectl apply -f /tmp/auth-service-k8s/service.yaml"
-            - ssh -p 2222 -i ~/.ssh/id_rsa root@103.214.234.68 "kubectl apply -f /tmp/auth-service-k8s/deployment.yaml"
+            - ssh -p 2142 -i ~/.ssh/id_rsa deployer@103.214.234.68 "kubectl apply -f /tmp/auth-service-k8s/service.yaml"
+            - ssh -p 2142 -i ~/.ssh/id_rsa deployer@103.214.234.68 "kubectl apply -f /tmp/auth-service-k8s/deployment.yaml"
             # Update deployment image - use escaped variable inside quotes
-            - ssh -p 2222 -i ~/.ssh/id_rsa root@103.214.234.68 "kubectl set image deployment/auth-service auth-service=${IMAGE} -n refundai"
+            - ssh -p 2142 -i ~/.ssh/id_rsa deployer@103.214.234.68 "kubectl set image deployment/auth-service auth-service=${IMAGE} -n refundai"
             # Wait for rollout to complete
-            - ssh -p 2222 -i ~/.ssh/id_rsa root@103.214.234.68 "kubectl rollout status deployment/auth-service -n refundai --timeout=5m"
+            
             # Cleanup temp files
-            - ssh -p 2222 -i ~/.ssh/id_rsa root@103.214.234.68 "rm -rf /tmp/auth-service-k8s"
+            - ssh -p 2142 -i ~/.ssh/id_rsa deployer@103.214.234.68 "rm -rf /tmp/auth-service-k8s"
 
 definitions:
   services:
