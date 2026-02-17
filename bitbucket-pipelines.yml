@@ -45,8 +45,9 @@ pipelines:
             # Apply ConfigMap and Secret
             - ssh -p 2142 -i ~/.ssh/id_rsa deployer@103.214.234.68 "kubectl apply -f /tmp/auth-service-k8s/configmap.yaml"
             - ssh -p 2142 -i ~/.ssh/id_rsa deployer@103.214.234.68 "kubectl apply -f /tmp/auth-service-k8s/secret.yaml"
-            # Apply Service and Deployment
+            # Apply Service, Ingress, and Deployment
             - ssh -p 2142 -i ~/.ssh/id_rsa deployer@103.214.234.68 "kubectl apply -f /tmp/auth-service-k8s/service.yaml"
+            - ssh -p 2142 -i ~/.ssh/id_rsa deployer@103.214.234.68 "kubectl apply -f /tmp/auth-service-k8s/ingress.yaml"
             - ssh -p 2142 -i ~/.ssh/id_rsa deployer@103.214.234.68 "kubectl apply -f /tmp/auth-service-k8s/deployment.yaml"
             # Update deployment image - use escaped variable inside quotes
             - ssh -p 2142 -i ~/.ssh/id_rsa deployer@103.214.234.68 "kubectl set image deployment/auth-service auth-service=${IMAGE} -n refundai"
