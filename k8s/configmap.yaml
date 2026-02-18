@@ -12,7 +12,7 @@ data:
   KAFKA_APP_ERROR_TOPIC: "app_error"
 
   DB_USER: "auth_user"
-  DB_PASSWORD: "Auth%40User321"
+  DB_PASSWORD: "Auth@User321"
   DB_HOST: "mysql.infra.svc.cluster.local"
   DB_NAME: "auth_ai"
   DB_PORT: "3306"            
