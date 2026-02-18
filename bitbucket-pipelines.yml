@@ -42,6 +42,8 @@ pipelines:
             - ssh -p 2142 -i ~/.ssh/id_rsa deployer@103.214.234.68 "mkdir -p /tmp/auth-service-k8s"
             # Copy k8s manifests to remote server
             - scp -P 2142 -i ~/.ssh/id_rsa k8s/*.yaml deployer@103.214.234.68:/tmp/auth-service-k8s/
+            # Apply Namespace
+            - ssh -p 2142 -i ~/.ssh/id_rsa deployer@103.214.234.68 "kubectl apply -f /tmp/auth-service-k8s/namespace.yaml"
             # Apply ConfigMap and Secret
             - ssh -p 2142 -i ~/.ssh/id_rsa deployer@103.214.234.68 "kubectl apply -f /tmp/auth-service-k8s/configmap.yaml"
             - ssh -p 2142 -i ~/.ssh/id_rsa deployer@103.214.234.68 "kubectl apply -f /tmp/auth-service-k8s/secret.yaml"
