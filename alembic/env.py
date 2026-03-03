@@ -6,9 +6,17 @@ from logging.config import fileConfig
 from app.database import Base
 from app.config import settings
 
+from urllib.parse import quote_plus
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
+
+# Dynamically set the SQLAlchemy URL from settings
+config.set_main_option(
+    "sqlalchemy.url",
+    f"mysql+pymysql://{settings.DB_USER}:{quote_plus(settings.DB_PASSWORD)}@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
+)
 
 # Interpret the config file for Python logging.
 fileConfig(config.config_file_name)
